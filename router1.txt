@@ -1,0 +1,6 @@
+[ConfigFile]
+Router-ID = 2
+Input-Ports = 5555, 6243, 6331 
+Output-Ports = 6110-1-1, 6201-1-2, 7345-1-3
+Periodic-Time = 120
+Timeout = 30
