@@ -86,71 +86,160 @@ class Packet:
         - We should only be creating update packets and not request packets
         """
 
-        entries = list(self.routing_table)  # snapshot of RTEntry objects
         packets = []
 
-        # If we have no entries at all, send a header‐only packet
-        if not entries:
-            hdr = bytearray(6)
-            hdr[0] = CMD_RESPONSE          # Command = 2 (Response)
-            hdr[1] = 2                     # Version = 2
-            hdr[2] = 0                     # Reserved
-            hdr[3] = 0                     # Reserved
-            hdr[4] = (self.router_ID >> 8) & 0xFF
-            hdr[5] =  self.router_ID       & 0xFF
-            return [bytes(hdr)]
+        if not(list(self.routing_table)):  # If no entry in table, only header will be sent over
+            header = bytearray(6) #Creates teh ByteArray
+            header.append(CMD_RESPONSE)  # Command
+            header.append(2) # Version
+            # packet.append((self.router_ID >> 8) & 0xFF)  # High byte
+            # packet.append(self.router_ID & 0x00FF)  # Low byte
+            header.append(0)  # Reserved byte 1
+            header.append(0)  # Reserved byte 2
+            header.append(self.router_ID >> 8) & 0xFF
+            header.append(self.router_ID & 0xFF)
 
-        # Otherwise, chunk into ≤25 entries per packet
-        for i in range(0, len(entries), 25):
-            chunk = entries[i : i + 25]
-            pkt_len = 6 + 20 * len(chunk)
-            pkt = bytearray(pkt_len)
+            return [bytes(header)]
 
-            # --- HEADER (6 bytes) ---
-            pkt[0] = CMD_RESPONSE          # 0: command
-            pkt[1] = 2                     # 1: version
-            pkt[2] = 0                     # 2: reserved
-            pkt[3] = 0                     # 3: reserved
-            pkt[4] = (self.router_ID >> 8) & 0xFF
-            pkt[5] =  self.router_ID       & 0xFF
 
-            # --- ENTRIES (20 bytes each) ---
-            offset = 6
-            for e in chunk:
-                #  0–1: AFI = 0x0002
-                pkt[offset + 0] = 0
-                pkt[offset + 1] = 2
+        # for i in range(((len(self.routing_table) - 1) // 25) + 1):
+        for i in range(0, len(list(self.routing_table)), 25):
+        # Checks how many entries to add to the packet (max 25)
+            num_entries = min(25, len(self.routing_table) - (i * 25))
 
-                #  2–3: Route tag = 0
-                pkt[offset + 2] = 0
-                pkt[offset + 3] = 0
+            # Create a new packet with space for the header and entries
+            packet_size = 6 + (num_entries * 20)  # 4 bytes for header + 20 bytes per entry
+            packet = bytearray(packet_size)  # Creates the ByteArray
 
-                #  4–7: Destination ID (32‑bit big‑endian)
-                dst = e.destination_id
-                pkt[offset + 4] = (dst >> 24) & 0xFF
-                pkt[offset + 5] = (dst >> 16) & 0xFF
-                pkt[offset + 6] = (dst >>  8) & 0xFF
-                pkt[offset + 7] =  dst        & 0xFF
+            # Add the header (Command = 2, Version = 2, Router ID)
+            packet = bytearray() # Creates the ByteArray
+            packet.append(CMD_RESPONSE) # Command field (2 = Response)
+            packet.append(2) # Version field (2 = RIP v2)
+            packet.append(0)  # Reserved byte 1
+            packet.append(0)  # Reserved byte 2
+            packet.append(self.router_ID >> 8) & 0xFF # Router ID - first byte
+            packet.append(self.router_ID & 0xFF) # Router ID - second byte
 
-                # 8–11: Subnet mask = 0.0.0.0
-                pkt[offset +  8 : offset + 12] = bytes((0, 0, 0, 0))
+            cur_index = 6  # Start adding entries after the header
 
-                # 12–15: Next hop = 0.0.0.0
-                pkt[offset + 12 : offset + 16] = bytes((0, 0, 0, 0))
+            for entry in self.routing_table[i * 25: (i * 25) + num_entries]:
 
-                # 16–19: Metric, with split‐horizon (poison reverse)
-                # If this route’s next_hop == neighbour_id → advertise metric = INF
-                metric = INF if e.next_hop_id == neighbour_id else e.metric
-                pkt[offset + 16] = (metric >> 24) & 0xFF
-                pkt[offset + 17] = (metric >> 16) & 0xFF
-                pkt[offset + 18] = (metric >>  8) & 0xFF
-                pkt[offset + 19] =  metric        & 0xFF
+                # # Add the Metric (4 bytes)
+                # packet[cur_index:cur_index+4] = entry.metric.to_bytes(6)  # Convert metric to 4 bytes
+                # cur_index += 6
 
-                offset += 20
+                # Address Family Identifier (2 bytes)
+                packet[cur_index] = 0
+                packet[cur_index+1] = 2 # AFI = 0x0002 for IPv4
+                # Route Tag (2 Bytes)
+                packet[cur_index+2] = 0 # Must be zero
+                packet[cur_index+3] = 0 # Must be zero
 
-            packets.append(bytes(pkt))
+                cur_index += 4
+
+                # Destination Router's IPv4 Address (4 bytes) / (entry. = entry / The current entry being looped)
+                packet[cur_index] = (entry.destination >> 24) & 0xFF
+                packet[cur_index+1] = (entry.destination >> 16) & 0xFF
+                packet[cur_index+2] = (entry.destination >> 8) & 0xFF
+                packet[cur_index+3] = entry.destination & 0xFF
+
+                cur_index += 4
+
+                # Subnet Mask (8 bytes), must be zero!!
+                for i in range(8):
+                    packet[cur_index+i] = 0
+
+                cur_index += 8
+                
+                # Metric (4 bytes) / Path Cost.
+                # # if entry.next_hop == neighbour['router_id']:
+                if entry.next_hop == neighbour_id['router_id']:
+                    cost = INF
+                else:
+                    entry.metric
+
+                # if hasattr(entry, 'next_hop') and entry.next_hop == neighbour['router_id']:
+                #     cost = INF
+                # else:
+                #     cost = entry.metric
+
+                packet[cur_index] = (cost >> 24) & 0xFF
+                packet[cur_index+1] = (cost >> 16) & 0xFF
+                packet[cur_index+2] = (cost >> 8) & 0xFF
+                packet[cur_index+3] = cost & 0xFF
+
+                cur_index += 4
+
+
+            packets.append(bytes(packet))  # Adds packet to the rest of the packets
 
         return packets
+
+        # entries = list(self.routing_table)  # snapshot of RTEntry objects
+        # packets = []
+
+        # # If we have no entries at all, send a header‐only packet
+        # if not entries:
+        #     hdr = bytearray(6)
+        #     hdr[0] = CMD_RESPONSE          # Command = 2 (Response)
+        #     hdr[1] = 2                     # Version = 2
+        #     hdr[2] = 0                     # Reserved
+        #     hdr[3] = 0                     # Reserved
+        #     hdr[4] = (self.router_ID >> 8) & 0xFF
+        #     hdr[5] =  self.router_ID       & 0xFF
+        #     return [bytes(hdr)]
+
+        # # Otherwise, chunk into ≤25 entries per packet
+        # for i in range(0, len(entries), 25):
+        #     chunk = entries[i : i + 25]
+        #     pkt_len = 6 + 20 * len(chunk)
+        #     pkt = bytearray(pkt_len)
+
+        #     # --- HEADER (6 bytes) ---
+        #     pkt[0] = CMD_RESPONSE          # 0: command
+        #     pkt[1] = 2                     # 1: version
+        #     pkt[2] = 0                     # 2: reserved
+        #     pkt[3] = 0                     # 3: reserved
+        #     pkt[4] = (self.router_ID >> 8) & 0xFF
+        #     pkt[5] =  self.router_ID       & 0xFF
+
+        #     # --- ENTRIES (20 bytes each) ---
+        #     offset = 6
+        #     for e in chunk:
+        #         #  0–1: AFI = 0x0002
+        #         pkt[offset + 0] = 0
+        #         pkt[offset + 1] = 2
+
+        #         #  2–3: Route tag = 0
+        #         pkt[offset + 2] = 0
+        #         pkt[offset + 3] = 0
+
+        #         #  4–7: Destination ID (32‑bit big‑endian)
+        #         dst = e.destination_id
+        #         pkt[offset + 4] = (dst >> 24) & 0xFF
+        #         pkt[offset + 5] = (dst >> 16) & 0xFF
+        #         pkt[offset + 6] = (dst >>  8) & 0xFF
+        #         pkt[offset + 7] =  dst        & 0xFF
+
+        #         # 8–11: Subnet mask = 0.0.0.0
+        #         pkt[offset +  8 : offset + 12] = bytes((0, 0, 0, 0))
+
+        #         # 12–15: Next hop = 0.0.0.0
+        #         pkt[offset + 12 : offset + 16] = bytes((0, 0, 0, 0))
+
+        #         # 16–19: Metric, with split‐horizon (poison reverse)
+        #         # If this route’s next_hop == neighbour_id → advertise metric = INF
+        #         metric = INF if e.next_hop_id == neighbour_id else e.metric
+        #         pkt[offset + 16] = (metric >> 24) & 0xFF
+        #         pkt[offset + 17] = (metric >> 16) & 0xFF
+        #         pkt[offset + 18] = (metric >>  8) & 0xFF
+        #         pkt[offset + 19] =  metric        & 0xFF
+
+        #         offset += 20
+
+        #     packets.append(bytes(pkt))
+
+        # return packets
 
 
 
