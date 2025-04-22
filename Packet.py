@@ -24,61 +24,8 @@ class Packet:
         self.router_ID = router_ID
         self.sockets = sockets
         self.neighbours = neighbors
-        # self.neighbours = {}
-        # self.routing_table = {}
-    ################################ Test
-    # def create_response_packets(self, neighbour_id: int) -> list[bytes]:
 
-    #     entries = list(self.routing_table)           # RTEntry instances
-    #     if not entries:
-    #         # header only
-    #         hdr = bytearray(6)
-    #         hdr[0] = CMD_RESPONSE
-    #         hdr[1] = 2       #2
-    #         hdr[2:4] = (0,0)
-    #         hdr[4] = (self.router_ID >> 8) & 0xFF
-    #         hdr[5] = self.router_ID & 0xFF
-    #         return [bytes(hdr)]
-
-    #     packets = []
-    #     # chunk into ≤25 entries
-    #     for i in range(0, len(entries), 25):
-    #         chunk = entries[i:i+25]
-    #         pkt = bytearray(4 + 20*len(chunk))
-    #         # header
-    #         pkt[0] = CMD_RESPONSE
-    #         pkt[1] = 2
-    #         pkt[2:4] = (0,0)
-    #         # router ID
-    #         pkt[4] = (self.router_ID >> 8) & 0xFF
-    #         pkt[5] = self.router_ID & 0xFF
-
-    #         base = 6
-    #         for e in chunk:
-    #             # AFI = 2
-    #             pkt[base] = 0; pkt[base+1] = 2
-    #             # route tag = 0
-    #             pkt[base+2:base+4] = (0,0)
-    #             # destination id (4 bytes big‐endian)
-    #             dst = e.destination_id
-    #             pkt[base+4:base+8] = dst.to_bytes(4, 'big')
-    #             # subnet mask = 0.0.0.0 (4 bytes)
-    #             pkt[base+8:base+12] = (0,0,0,0)
-    #             # next hop = 0.0.0.0 (4 bytes)
-    #             pkt[base+12:base+16] = (0,0,0,0)
-    #             # metric
-    #             m = INF if e.next_hop_id == neighbour_id else e.metric
-    #             pkt[base+16:base+20] = m.to_bytes(4, 'big')
-
-    #             base += 20
-
-    #         packets.append(bytes(pkt))
-
-        # return packets
-
-     
-     
-    #################################
+ 
     def create_response_packets(self, neighbour_id: int) -> list[bytes]:
         """
         Create the request packet and send it to the server
@@ -86,160 +33,129 @@ class Packet:
         - We should only be creating update packets and not request packets
         """
 
-        # packets = []
-
-        # if not(list(self.routing_table)):  # If no entry in table, only header will be sent over
-        #     header = bytearray(6) #Creates teh ByteArray
-        #     header.append(CMD_RESPONSE)  # Command
-        #     header.append(2) # Version
-        #     # packet.append((self.router_ID >> 8) & 0xFF)  # High byte
-        #     # packet.append(self.router_ID & 0x00FF)  # Low byte
-        #     header.append(0)  # Reserved byte 1
-        #     header.append(0)  # Reserved byte 2
-        #     header.append((self.router_ID >> 8) & 0xFF)
-        #     header.append(self.router_ID & 0xFF)
-
-        #     return [bytes(header)]
-
-
-        # # for i in range(((len(self.routing_table) - 1) // 25) + 1):
-        # for i in range(0, len(list(self.routing_table)), 25):
-        # # Checks how many entries to add to the packet (max 25)
-        #     num_entries = min(25, len(self.routing_table) - (i * 25))
-
-        #     # Create a new packet with space for the header and entries
-        #     packet_size = 6 + (num_entries * 20)  # 4 bytes for header + 20 bytes per entry
-        #     packet = bytearray(packet_size)  # Creates the ByteArray
-
-        #     # Add the header (Command = 2, Version = 2, Router ID)
-        #     packet = bytearray() # Creates the ByteArray
-        #     packet.append(CMD_RESPONSE) # Command field (2 = Response)
-        #     packet.append(2) # Version field (2 = RIP v2)
-        #     packet.append(0)  # Reserved byte 1
-        #     packet.append(0)  # Reserved byte 2
-        #     packet.append(self.router_ID >> 8) & 0xFF # Router ID - first byte
-        #     packet.append(self.router_ID & 0xFF) # Router ID - second byte
-
-        #     cur_index = 6  # Start adding entries after the header
-
-        #     for entry in self.routing_table[i * 25: (i * 25) + num_entries]:
-
-        #         # # Add the Metric (4 bytes)
-        #         # packet[cur_index:cur_index+4] = entry.metric.to_bytes(6)  # Convert metric to 4 bytes
-        #         # cur_index += 6
-
-        #         # Address Family Identifier (2 bytes)
-        #         packet[cur_index] = 0
-        #         packet[cur_index+1] = 2 # AFI = 0x0002 for IPv4
-        #         # Route Tag (2 Bytes)
-        #         packet[cur_index+2] = 0 # Must be zero
-        #         packet[cur_index+3] = 0 # Must be zero
-
-        #         cur_index += 4
-
-        #         # Destination Router's IPv4 Address (4 bytes) / (entry. = entry / The current entry being looped)
-        #         packet[cur_index] = (entry.destination >> 24) & 0xFF
-        #         packet[cur_index+1] = (entry.destination >> 16) & 0xFF
-        #         packet[cur_index+2] = (entry.destination >> 8) & 0xFF
-        #         packet[cur_index+3] = entry.destination & 0xFF
-
-        #         cur_index += 4
-
-        #         # Subnet Mask (8 bytes), must be zero!!
-        #         for i in range(8):
-        #             packet[cur_index+i] = 0
-
-        #         cur_index += 8
-                
-        #         # Metric (4 bytes) / Path Cost.
-        #         # # if entry.next_hop == neighbour['router_id']:
-        #         if entry.next_hop == neighbour_id['Router-ID']:
-        #             cost = INF
-        #         else:
-        #             entry.metric
-
-        #         # if hasattr(entry, 'next_hop') and entry.next_hop == neighbour['router_id']:
-        #         #     cost = INF
-        #         # else:
-        #         #     cost = entry.metric
-
-        #         packet[cur_index] = (cost >> 24) & 0xFF
-        #         packet[cur_index+1] = (cost >> 16) & 0xFF
-        #         packet[cur_index+2] = (cost >> 8) & 0xFF
-        #         packet[cur_index+3] = cost & 0xFF
-
-        #         cur_index += 4
-
-
-        #     packets.append(bytes(packet))  # Adds packet to the rest of the packets
-
-        # return packets
-
-        entries = list(self.routing_table)  # snapshot of RTEntry objects
         packets = []
+        entries = list(self.routing_table)  # Snapshot of RT
 
-        # If we have no entries at all, send a header‐only packet
         if not entries:
-            hdr = bytearray(6)
-            hdr[0] = CMD_RESPONSE          # Command = 2 (Response)
-            hdr[1] = 2                     # Version = 2
-            hdr[2] = 0                     # Reserved
-            hdr[3] = 0                     # Reserved
-            hdr[4] = (self.router_ID >> 8) & 0xFF
-            hdr[5] =  self.router_ID       & 0xFF
-            return [bytes(hdr)]
+            header = bytearray(6)
+            header[0] = CMD_RESPONSE
+            header[1] = 2
+            header[2:4] = (0, 0)
+            header[4] = (self.router_ID >> 8) & 0xFF
+            header[5] = self.router_ID & 0xFF
+            
+            return [bytes(header)]
 
-        # Otherwise, chunk into ≤25 entries per packet
         for i in range(0, len(entries), 25):
-            chunk = entries[i : i + 25]
-            pkt_len = 6 + 20 * len(chunk)
-            pkt = bytearray(pkt_len)
+            entry_chunk = entries[i:i + 25]
+            packet = bytearray(6 + 20 * len(entry_chunk))
 
-            # --- HEADER (6 bytes) ---
-            pkt[0] = CMD_RESPONSE          # 0: command
-            pkt[1] = 2                     # 1: version
-            pkt[2] = 0                     # 2: reserved
-            pkt[3] = 0                     # 3: reserved
-            pkt[4] = (self.router_ID >> 8) & 0xFF
-            pkt[5] =  self.router_ID       & 0xFF
+            # Header
+            packet[0] = CMD_RESPONSE
+            packet[1] = 2
+            packet[2:4] = (0, 0)
+            packet[4] = (self.router_ID >> 8) & 0xFF
+            packet[5] = self.router_ID & 0xFF
 
-            # --- ENTRIES (20 bytes each) ---
-            offset = 6
-            for e in chunk:
-                #  0–1: AFI = 0x0002
-                pkt[offset + 0] = 0
-                pkt[offset + 1] = 2
+            cur_index = 6
+            for entry in entry_chunk:
+                # AFI + Route Tag
+                packet[cur_index] = 0
+                packet[cur_index + 1] = 2
+                packet[cur_index + 2] = 0
+                packet[cur_index + 3] = 0
+                cur_index += 4
 
-                #  2–3: Route tag = 0
-                pkt[offset + 2] = 0
-                pkt[offset + 3] = 0
+                # Destination ID (4 bytes)
+                packet[cur_index] = (entry.destination_id >> 24) & 0xFF
+                packet[cur_index + 1] = (entry.destination_id >> 16) & 0xFF
+                packet[cur_index + 2] = (entry.destination_id >> 8) & 0xFF
+                packet[cur_index + 3] = entry.destination_id & 0xFF
+                cur_index += 4
 
-                #  4–7: Destination ID (32‑bit big‑endian)
-                dst = e.destination_id
-                pkt[offset + 4] = (dst >> 24) & 0xFF
-                pkt[offset + 5] = (dst >> 16) & 0xFF
-                pkt[offset + 6] = (dst >>  8) & 0xFF
-                pkt[offset + 7] =  dst        & 0xFF
+                # Subnet Mask (8 bytes = 0s)
+                for i in range(8):
+                    packet[cur_index + i] = 0
+                cur_index += 8
 
-                # 8–11: Subnet mask = 0.0.0.0
-                pkt[offset +  8 : offset + 12] = bytes((0, 0, 0, 0))
+                # Metric with poison reverse
+                cost = INF if entry.next_hop_id == neighbour_id else entry.metric
+                packet[cur_index] = (cost >> 24) & 0xFF
+                packet[cur_index + 1] = (cost >> 16) & 0xFF
+                packet[cur_index + 2] = (cost >> 8) & 0xFF
+                packet[cur_index + 3] = cost & 0xFF
+                cur_index += 4
 
-                # 12–15: Next hop = 0.0.0.0
-                pkt[offset + 12 : offset + 16] = bytes((0, 0, 0, 0))
-
-                # 16–19: Metric, with split‐horizon (poison reverse)
-                # If this route’s next_hop == neighbour_id → advertise metric = INF
-                metric = INF if e.next_hop_id == neighbour_id else e.metric
-                pkt[offset + 16] = (metric >> 24) & 0xFF
-                pkt[offset + 17] = (metric >> 16) & 0xFF
-                pkt[offset + 18] = (metric >>  8) & 0xFF
-                pkt[offset + 19] =  metric        & 0xFF
-
-                offset += 20
-
-            packets.append(bytes(pkt))
+            packets.append(bytes(packet))
 
         return packets
+
+
+        # entries = list(self.routing_table)  # snapshot of RTEntry objects
+        # packets = []
+
+        # # If we have no entries at all, send a header‐only packet
+        # if not entries:
+        #     hdr = bytearray(6)
+        #     hdr[0] = CMD_RESPONSE          # Command = 2 (Response)
+        #     hdr[1] = 2                     # Version = 2
+        #     hdr[2] = 0                     # Reserved
+        #     hdr[3] = 0                     # Reserved
+        #     hdr[4] = (self.router_ID >> 8) & 0xFF
+        #     hdr[5] =  self.router_ID       & 0xFF
+        #     return [bytes(hdr)]
+
+        # # Otherwise, chunk into ≤25 entries per packet
+        # for i in range(0, len(entries), 25):
+        #     chunk = entries[i : i + 25]
+        #     pkt_len = 6 + 20 * len(chunk)
+        #     pkt = bytearray(pkt_len)
+
+        #     # --- HEADER (6 bytes) ---
+        #     pkt[0] = CMD_RESPONSE          # 0: command
+        #     pkt[1] = 2                     # 1: version
+        #     pkt[2] = 0                     # 2: reserved
+        #     pkt[3] = 0                     # 3: reserved
+        #     pkt[4] = (self.router_ID >> 8) & 0xFF
+        #     pkt[5] =  self.router_ID       & 0xFF
+
+        #     # --- ENTRIES (20 bytes each) ---
+        #     offset = 6
+        #     for e in chunk:
+        #         #  0–1: AFI = 0x0002
+        #         pkt[offset + 0] = 0
+        #         pkt[offset + 1] = 2
+
+        #         #  2–3: Route tag = 0
+        #         pkt[offset + 2] = 0
+        #         pkt[offset + 3] = 0
+
+        #         #  4–7: Destination ID (32‑bit big‑endian)
+        #         dst = e.destination_id
+        #         pkt[offset + 4] = (dst >> 24) & 0xFF
+        #         pkt[offset + 5] = (dst >> 16) & 0xFF
+        #         pkt[offset + 6] = (dst >>  8) & 0xFF
+        #         pkt[offset + 7] =  dst        & 0xFF
+
+        #         # 8–11: Subnet mask = 0.0.0.0
+        #         pkt[offset +  8 : offset + 12] = bytes((0, 0, 0, 0))
+
+        #         # 12–15: Next hop = 0.0.0.0
+        #         pkt[offset + 12 : offset + 16] = bytes((0, 0, 0, 0))
+
+        #         # 16–19: Metric, with split‐horizon (poison reverse)
+        #         # If this route’s next_hop == neighbour_id → advertise metric = INF
+        #         metric = INF if e.next_hop_id == neighbour_id else e.metric
+        #         pkt[offset + 16] = (metric >> 24) & 0xFF
+        #         pkt[offset + 17] = (metric >> 16) & 0xFF
+        #         pkt[offset + 18] = (metric >>  8) & 0xFF
+        #         pkt[offset + 19] =  metric        & 0xFF
+
+        #         offset += 20
+
+        #     packets.append(bytes(pkt))
+
+        # return packets
 
 
 
@@ -288,141 +204,165 @@ class Packet:
             - consider returning some values?
         """
 
+        # if len(entry) != 20:
+        #     print(f"[ERROR] Bad entry length: {len(entry)} != 20")
+        #     return False
+
+        # # 1) AFI (bytes 0–1) must equal 0x0002
+        # if entry[0] != 0 or entry[1] != 2:
+        #     print(f"[ERROR] Bad AFI: {entry[0]:02x}{entry[1]:02x}")
+        #     return False
+
+        # # 2) Route tag (bytes 2–3) must be zero
+        # if entry[2] != 0 or entry[3] != 0:
+        #     print(f"[ERROR] Non‑zero route tag: {entry[2:4]}")
+        #     return False
+
+        # # 3) Destination ID (bytes 4–7)
+        # dst = int.from_bytes(entry[4:8], "big")
+        # if not (0 <= dst <= 0xFFFFFFFF):
+        #     print(f"[ERROR] Bad destination ID: {dst}")
+        #     return False
+
+        # # 4) Subnet mask (bytes 8–11) must be a valid mask, 
+        # # here we accept 0.0.0.0 up to 255.255.255.255
+        # mask_bytes = entry[8:12]
+        # if any(b < 0 or b > 255 for b in mask_bytes):
+        #     print(f"[ERROR] Bad subnet mask bytes: {tuple(mask_bytes)}")
+        #     return False
+        # # (optional) you can check that mask is contiguous ones then zeros
+
+        # # 5) Next hop (bytes 12–15)
+        # nh_bytes = entry[12:16]
+        # if any(b < 0 or b > 255 for b in nh_bytes):
+        #     print(f"[ERROR] Bad next‑hop bytes: {tuple(nh_bytes)}")
+        #     return False
+
+        # # 6) Metric (bytes 16–19) must be in [1..16]
+        # metric = int.from_bytes(entry[16:20], "big")
+        # if not (1 <= metric <= INF):
+        #     print(f"[ERROR] Bad metric: {metric} (must be 1..{INF})")
+        #     return False
+        
+        # print("hehehhe")
+
+        # # All checks passed
+        # return True
+
+        passed = True
+
         if len(entry) != 20:
             print(f"[ERROR] Bad entry length: {len(entry)} != 20")
             return False
 
-        # 1) AFI (bytes 0–1) must equal 0x0002
-        if entry[0] != 0 or entry[1] != 2:
-            print(f"[ERROR] Bad AFI: {entry[0]:02x}{entry[1]:02x}")
-            return False
+        family_identifier_first = int(entry[0]) # First Byte
+        family_identifier_second = int(entry[1]) # Second Byte
+        family_identifier = (family_identifier_first, family_identifier_second) # Family Identifier
+        if family_identifier != (0, 2): # Checks Family Identifier
+            print("\n[ERROR] Invalid Address Family Identifier!") # "The address family identifier (AFI) for IPv4 is 0x0002."
+            passed = False
 
-        # 2) Route tag (bytes 2–3) must be zero
-        if entry[2] != 0 or entry[3] != 0:
-            print(f"[ERROR] Non‑zero route tag: {entry[2:4]}")
-            return False
-
-        # 3) Destination ID (bytes 4–7)
-        dst = int.from_bytes(entry[4:8], "big")
-        if not (0 <= dst <= 0xFFFFFFFF):
-            print(f"[ERROR] Bad destination ID: {dst}")
-            return False
-
-        # 4) Subnet mask (bytes 8–11) must be a valid mask, 
-        # here we accept 0.0.0.0 up to 255.255.255.255
-        mask_bytes = entry[8:12]
-        if any(b < 0 or b > 255 for b in mask_bytes):
-            print(f"[ERROR] Bad subnet mask bytes: {tuple(mask_bytes)}")
-            return False
-        # (optional) you can check that mask is contiguous ones then zeros
-
-        # 5) Next hop (bytes 12–15)
-        nh_bytes = entry[12:16]
-        if any(b < 0 or b > 255 for b in nh_bytes):
-            print(f"[ERROR] Bad next‑hop bytes: {tuple(nh_bytes)}")
-            return False
-
-        # 6) Metric (bytes 16–19) must be in [1..16]
-        metric = int.from_bytes(entry[16:20], "big")
-        if not (1 <= metric <= INF):
-            print(f"[ERROR] Bad metric: {metric} (must be 1..{INF})")
-            return False
-
-        # All checks passed
-        return True
-
-        # passed = True
-
-        # family_identifier_first = int(entry[0]) # First Byte
-        # family_identifier_second = int(entry[1]) # Second Byte
-        # family_identifier = (family_identifier_first, family_identifier_second) # Family Identifier
-        # if family_identifier != (0, 2): # Checks Family Identifier
-        #     print("\nERROR: Invalid Address Family Identifier!") # "The address family identifier (AFI) for IPv4 is 0x0002."
-        #     passed = False
-
-        # route_tag_first = int(entry[2]) # First Byte
-        # route_tag_second = int(entry[3]) # Second Byte
-        # route_tag = (route_tag_first, route_tag_second) # Route Tag
-        # if route_tag != (0, 0):
-        #     print("\nERROR: Invalid Route Tag!") # "Route Tag – Used to distinguish routes learned from other routing protocols. 
-        #                                        # The value is typically set to 0 for RIP routes."
-        #     passed = False
+        route_tag_first = int(entry[2]) # First Byte
+        route_tag_second = int(entry[3]) # Second Byte
+        route_tag = (route_tag_first, route_tag_second) # Route Tag
+        if route_tag != (0, 0):
+            print("\n[ERROR] Invalid Route Tag!") # "Route Tag – Used to distinguish routes learned from other routing protocols. 
+                                               # The value is typically set to 0 for RIP routes."
+            passed = False
             
 
-        # IPv4_addy_first = int(entry[4]) # First Byte
-        # IPv4_addy_second = int(entry[5]) # Second Byte
-        # IPv4_addy_third = int(entry[6]) # Third Byte
-        # IPv4_addy_forth = int(entry[7]) # Forth Byte
-        # IPv4_addy = (IPv4_addy_first, IPv4_addy_second, IPv4_addy_third, IPv4_addy_forth) # IPv4 Address
-        # for byte in IPv4_addy:
-        #     if not (0 <= byte <= 255):  # Each byte must be between 0 and 255
-        #         print(f"\nERROR: Invalid byte in IPv4 Address: {byte}! It must be between 0-255 inclusive.")
-        #         passed = False
+        IPv4_addy_first = int(entry[4]) # First Byte
+        IPv4_addy_second = int(entry[5]) # Second Byte
+        IPv4_addy_third = int(entry[6]) # Third Byte
+        IPv4_addy_forth = int(entry[7]) # Forth Byte
+        IPv4_addy = (IPv4_addy_first, IPv4_addy_second, IPv4_addy_third, IPv4_addy_forth) # IPv4 Address
+        addy = True
+        for byte in IPv4_addy:
+            if not (0 <= byte <= 0xFFFFFFFF):  # Each byte must be between 0 and 255
+                print(f"[ERROR] Invalid byte in IPv4 Address: {byte}!")
+                passed = False
+                addy = False
+        if not addy:
+            print("\n-------------Destiantion ID-------------")
+            print(f"[ERROR] Invalid IPv4 Address: {IPv4_addy}!")
+            print("----------------------------------------")
 
-        # subnet_mask_first = int(entry[8])  # First Byte of subnet mask
-        # subnet_mask_second = int(entry[9])  # Second Byte
-        # subnet_mask_third = int(entry[10])  # Third Byte
-        # subnet_mask_forth = int(entry[11])  # Fourth Byte
-        # subnet_mask = (subnet_mask_first, subnet_mask_second, subnet_mask_third, subnet_mask_forth)  # Subnet Mask
 
-        # # if subnet_mask == (0,0,0,0):
-        # #     print("No subnet mask included")
+        subnet_mask_first = int(entry[8])  # First Byte of subnet mask
+        subnet_mask_second = int(entry[9])  # Second Byte
+        subnet_mask_third = int(entry[10])  # Third Byte
+        subnet_mask_forth = int(entry[11])  # Fourth Byte
+        subnet_mask = (subnet_mask_first, subnet_mask_second, subnet_mask_third, subnet_mask_forth)  # Subnet Mask
+        mask = True
+        for byte in subnet_mask:
+            if not (0 <= byte <= 255):  # Each byte must be between 0 and 255
+                print(f"[ERROR] Invalid byte in Subnet Mask {byte}! It must be between 0-255 inclusive.")
+                mask = False
+                passed = False
+        if not mask:
+            print("\n-------------Subnet Mask-------------")
+            print(f"[ERROR] Bad subnet mask bytes: {subnet_mask}")
+            print("-------------------------------------")
 
-        # # else:
-        # #     for byte in subnet_mask:
-        # #         if not (0 <= byte <= 255):  # Each byte of the subnet mask must be between 0 and 255
-        # #             print(f"\nERROR: Invalid byte in Subnet Mask: {byte}! It must be between 0-255 inclusive.")
-        # #             passed = False
+       
 
-        # next_hop_first = int(entry[12])  # First Byte of next hop
-        # next_hop_second = int(entry[13])  # Second Byte
-        # next_hop_third = int(entry[14])  # Third Byte
-        # next_hop_forth = int(entry[15])  # Fourth Byte
-        # next_hop = (next_hop_first, next_hop_second, next_hop_third, next_hop_forth)  # Next hop IP address
+        next_hop_first = int(entry[12])  # First Byte of next hop
+        next_hop_second = int(entry[13])  # Second Byte
+        next_hop_third = int(entry[14])  # Third Byte
+        next_hop_forth = int(entry[15])  # Fourth Byte
+        next_hop = (next_hop_first, next_hop_second, next_hop_third, next_hop_forth)  # Next hop IP address
+        hop = True
+        for byte in next_hop:
+            if not (0 <= byte <= 255):  # Each byte must be between 0 and 255
+                print(f"ERROR: Invalid byte in Next Hop: {byte}! It must be between 0-255 inclusive.")
+                hop = False
+                passed = False
+        if not hop:
+            print("\n-------------Next Hop-------------")
+            print(f"[ERROR] Bad subnet mask bytes: {next_hop}")
+            print("-------------------------------------")
 
-        # metric_first = int(entry[16])  # First byte of metric
-        # metric_second = int(entry[17])  # Second byte of metric
-        # metric_third = int(entry[18])  # Third byte of metric
-        # metric_fourth = int(entry[19])  # Fourth byte of metric
-        # received_metric = (metric_first << 24) + (metric_second << 16) + (metric_third << 8) + metric_fourth  # Combine the 4 bytes into a single metric
-        
-        # # if next_hop == (0,0,0,0):
-        # #     if received_metric == INF:
-        # #         print("ERROR: Next Hop is (0.0.0.0), indicating an unreachable destination. Metric is 16 (infinity).")
-        # #         passed = False
-        # #     else:
-        # #         print("Next Hop is (0.0.0.0), indicating a directly connected route. No further hop required.")
-        # #         # This is a valid case and the route is accepted as directly connected to the destination :)
-
-        # # else:
-        # #     for byte in next_hop:
-        # #         if not (0 <= byte <= 255):  # Each byte of the next hop must be between 0 and 255
-        # #             print(f"\nERROR: Invalid byte in Next Hop Address: {byte}! It must be between 0-255 inclusive.")
-        # #             passed = False
-        # return passed
-
+        metric_first = int(entry[16])  # First byte of metric
+        metric_second = int(entry[17])  # Second byte of metric
+        metric_third = int(entry[18])  # Third byte of metric
+        metric_fourth = int(entry[19])  # Fourth byte of metric
+        received_metric = (metric_first << 24) + (metric_second << 16) + (metric_third << 8) + metric_fourth  # Combine the 4 bytes into a single metric
+        if not (1 <= received_metric <= INF):
+            print(f"[ERROR] Invalid metric: {received_metric} (must be between 1 - {INF})")
+            passed = False
+        return passed
 
 
     def receive_and_process_packet(self, packet: bytes):
-        print("Packet Received Successfully!\nChecking for Validity…")
+        print("Packet Recieved Succesfully! \n"
+        "Checking for Validity!...")
 
-        # 1) Header
+        packet_size = 0
         received_ID = self.check_header(packet)
         if not received_ID:
-            print("[ERROR] Packet Header Check Failed!")
+            print("[ERROR] Packet Header Check Failed!\n")
             return
 
         # 2) How many 20‐byte entries?
         num_entries = (len(packet) - 6) // RT_SIZE
 
-        for idx in range(num_entries):
-            start = 6 + idx * RT_SIZE
-            end   = start + RT_SIZE
-            entry = packet[start:end]
+        # for idx in range(num_entries):
+        #     start = 6 + idx * RT_SIZE
+        #     end   = start + RT_SIZE
+        #     entry = packet[start:end]
+        for entry_index in range(num_entries):
+            if packet_size > 25:
+                print("ERROR: Invalid packet length")
+                return
+            entry_start_index = 6 + entry_index * RT_SIZE # (Start of Example) 1. Start at 6 + 0 * 20 = 6 | 2. 6 + 1 * 20 = 26...
+            entry_end_index = entry_start_index + RT_SIZE # 1. Then 6 + 20 = 26 | 2. 26 + 20 = 46...
+            entry = packet[entry_start_index:entry_end_index] # 1. So 6-26 | 2. 26-46... | Checks every 20bytes (End of Example)
+            packet_size += 1
 
-            # 2a) Validate
             if not self.check_entry(entry):
-                print(f"[ERROR] Bad entry #{idx} (bytes {start}–{end}); dropping packet.")
+                # If entry invalid, log the error and drop the packet
+                print(f"ERROR: Invalid or empty entry at index {entry_index} (starting at byte {entry_start_index}). \n"
+                "Dropping Packet!...")
                 return
 
             # 2b) Parse fields
@@ -454,30 +394,3 @@ class Packet:
 
         # Optionally: prune dead entries and/or trigger triggered update
         self.routing_table.prune()
-
-            # #Compute updated metric
-            # cost = None
-            # for route in self.routing_table:
-            #     if route.router_id == recieved_ID:
-            #         cost = route.metric
-            #         # print("[!] Checkpoint 2")
-            #         break
-
-            # if cost is None:
-            #     # cost = 1
-            #     for neighbor in self.neighbours:
-            #         if neighbor['Router-ID'] == recieved_ID:
-            #             cost = int(neighbor['metric']) 
-            #             # print("[!] Checkpoint 3")
-            #             break
-            #     else:
-            #         cost = INF
-
-            # updated_metric = min(metric + cost, INF)
-
-            # if updated_metric == INF:
-            #     self.routing_table.mark_garbage(dest_id)
-
-            # else:
-            #     self.routing_table.add_or_update_entry(dest_id, recieved_ID, updated_metric)
-    
