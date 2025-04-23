@@ -32,7 +32,7 @@ class Packet:
         - Implemented correctly?
         - We should only be creating update packets and not request packets
         """
-
+        
         packets = []
         entries = list(self.routing_table)  # Snapshot of RT
 
@@ -46,8 +46,16 @@ class Packet:
             
             return [bytes(header)]
 
+
         for i in range(0, len(entries), 25):
-            entry_chunk = entries[i:i + 25]
+            # Remove entries destined for the neighbor
+            entry_chunk = [
+                entry for entry in entries[i:i + 25]
+                if entry.destination_id != neighbour_id
+            ]
+            if not entry_chunk:
+                continue  # Skip empty chunks
+
             packet = bytearray(6 + 20 * len(entry_chunk))
 
             # Header
@@ -74,12 +82,15 @@ class Packet:
                 cur_index += 4
 
                 # Subnet Mask (8 bytes = 0s)
-                for i in range(8):
-                    packet[cur_index + i] = 0
+                for j in range(8):
+                    packet[cur_index + j] = 0
                 cur_index += 8
 
+                print(f"[DEBUG] Sending route to {entry.destination_id} via {entry.next_hop_id} to neighbour {neighbour_id}")
+                
                 # Metric with poison reverse
                 cost = INF if entry.next_hop_id == neighbour_id else entry.metric
+
                 packet[cur_index] = (cost >> 24) & 0xFF
                 packet[cur_index + 1] = (cost >> 16) & 0xFF
                 packet[cur_index + 2] = (cost >> 8) & 0xFF
@@ -88,6 +99,57 @@ class Packet:
 
             packets.append(bytes(packet))
 
+
+
+
+        # for i in range(0, len(entries), 25):
+        #     entry_chunk = entries[i:i + 25]
+        #     packet = bytearray(6 + 20 * len(entry_chunk))
+
+        #     # Header
+        #     packet[0] = CMD_RESPONSE
+        #     packet[1] = 2
+        #     packet[2:4] = (0, 0)
+        #     packet[4] = (self.router_ID >> 8) & 0xFF
+        #     packet[5] = self.router_ID & 0xFF
+
+        #     cur_index = 6
+        #     for entry in entry_chunk:
+        #         if entry.destination_id == neighbour_id:
+        #             continue
+        #         # AFI + Route Tag
+        #         packet[cur_index] = 0
+        #         packet[cur_index + 1] = 2
+        #         packet[cur_index + 2] = 0
+        #         packet[cur_index + 3] = 0
+        #         cur_index += 4
+
+        #         # Destination ID (4 bytes)
+        #         packet[cur_index] = (entry.destination_id >> 24) & 0xFF
+        #         packet[cur_index + 1] = (entry.destination_id >> 16) & 0xFF
+        #         packet[cur_index + 2] = (entry.destination_id >> 8) & 0xFF
+        #         packet[cur_index + 3] = entry.destination_id & 0xFF
+        #         cur_index += 4
+
+        #         # Subnet Mask (8 bytes = 0s)
+        #         for i in range(8):
+        #             packet[cur_index + i] = 0
+        #         cur_index += 8
+        #         print(f"[DEBUG] Sending route to {entry.destination_id} via {entry.next_hop_id} to neighbour {neighbour_id}")
+        #         # Metric with poison reverse
+        #         if entry.next_hop_id == neighbour_id:
+        #             cost = INF
+        #         else:
+        #             cost = entry.metric
+                
+        #         packet[cur_index] = (cost >> 24) & 0xFF
+        #         packet[cur_index + 1] = (cost >> 16) & 0xFF
+        #         packet[cur_index + 2] = (cost >> 8) & 0xFF
+        #         packet[cur_index + 3] = cost & 0xFF
+        #         cur_index += 4
+
+        #     packets.append(bytes(packet))
+        
         return packets
 
 
@@ -250,6 +312,7 @@ class Packet:
         # return True
 
         passed = True
+        
 
         if len(entry) != 20:
             print(f"[ERROR] Bad entry length: {len(entry)} != 20")
@@ -336,16 +399,17 @@ class Packet:
     def receive_and_process_packet(self, packet: bytes):
         print("Packet Recieved Succesfully! \n"
         "Checking for Validity!...")
-
+     
         packet_size = 0
         received_ID = self.check_header(packet)
         if not received_ID:
             print("[ERROR] Packet Header Check Failed!\n")
             return
-
+        print(f"[✓] Received update from Router {received_ID}")
+        
         # 2) How many 20‐byte entries?
         num_entries = (len(packet) - 6) // RT_SIZE
-
+        print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
         # for idx in range(num_entries):
         #     start = 6 + idx * RT_SIZE
         #     end   = start + RT_SIZE
@@ -385,12 +449,31 @@ class Packet:
 
             # 5) Apply split‐horizon: if next_hop == received_ID, poison
             #    (your create_response already handles that; here we just update)
+            entry_obj = None
+
+            # Loop through routing table entries to find the destination
+            for entry in self.routing_table:
+                if entry.destination_id == dest_id:
+                    entry_obj = entry
+                    break
+
+            # If we found the entry, reset its timeout
+            if entry_obj:
+                entry_obj.reset_timeout()
+
+            # Now handle the metric update logic
             if new_metric >= INF:
                 self.routing_table.mark_unreachable(dest_id)
             else:
-                self.routing_table.add_or_update(dest_id,
-                                                received_ID,
-                                                new_metric)
-
+                self.routing_table.add_or_update(dest_id, received_ID, new_metric)
+            
+            # if new_metric >= INF:
+            #     self.routing_table.mark_unreachable(dest_id)
+            # else:
+            #     self.routing_table.add_or_update(dest_id,
+            #                                     received_ID,
+            #                                     new_metric)
+        
+        print("Packet Check Passed!\n")
         # Optionally: prune dead entries and/or trigger triggered update
         self.routing_table.prune()

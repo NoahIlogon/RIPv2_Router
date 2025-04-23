@@ -35,7 +35,7 @@ LOCAL_HOST = "127.0.0.1"
 
 class RIPv2_Router:
 
-    def __init__(self, router_ID, inputs, outputs, timeout=30, garbage_time=30):
+    def __init__(self, router_ID, inputs, outputs, timeout=90, garbage_time=60):
         self.router_ID = router_ID
         self.inputs = inputs # Input Ports
         self.outputs = outputs # Output Ports        ROUTER_OUTPUTS
@@ -54,7 +54,7 @@ class RIPv2_Router:
         # # Initiate the routing table
         # self.routing_table = []  # Start with an empty routing table
         # self.routing_table.append(RT_entry(address, next_hop, metric))
-        self.routing_table = RoutingTable(timeout=timeout, garbage=garbage_time)
+        self.routing_table = RoutingTable(timeout=90, garbage=60)
 
         # self.routing_table = RT_entry(self.router_ID)
 
@@ -152,7 +152,7 @@ class RIPv2_Router:
             self.init_periodic_update()
 
         plus_minus = random.uniform(0, 5)  # offset by a small random time (+/- 0 to 5 seconds)
-        self.periodic_updates = Timer(10 + plus_minus, send_update) # Triggers to send an update every 30 seconds
+        self.periodic_updates = Timer(30 + plus_minus, send_update) # Triggers to send an update every 30 seconds
         self.periodic_updates.start() # This triggers the timer to start (which is the line above)
     
 
@@ -291,6 +291,11 @@ class RIPv2_Router:
                 try:
                     data, addr = sock.recvfrom(1024)
                     # print(f"[DEBUG] Got {len(data)} bytes from {addr} on local port {sock.getsockname()[1]}")
+
+                    local_port = sock.getsockname()[1]
+                    print(f"[RX] Got {len(data)} bytes on local port {local_port} from {addr}")
+
+
                     print(f"Received packet from {addr}\n")
                     self.packet_manager.receive_and_process_packet(data)
                     print("Routing Table Updated...\n")

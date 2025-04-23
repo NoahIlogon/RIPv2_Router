@@ -20,7 +20,7 @@ class RTEntry:
     Creates an object for one 
     """
 
-    def __init__(self, destination_id: int, next_hop_id: int, metric: int, timeout: float = 30.0, garbage: float = 30.0):
+    def __init__(self, destination_id: int, next_hop_id: int, metric: int, timeout: float = 90.0, garbage: float = 60.0):
         
         self.destination_id = destination_id
         self.next_hop_id = next_hop_id
@@ -56,6 +56,7 @@ class RTEntry:
     def _on_timeout(self):
         """Called when the route times out—mark INF and start garbage."""
         self.metric = INF
+        print(f"[TIMEOUT] Route to {self.destination_id} timed out. Metric set to INF.")
         self.in_garbage = True
         self._garbage_timer = threading.Timer(self._garbage_interval,
                                               self._on_garbage)
@@ -88,7 +89,7 @@ class RoutingTable:
     Manages a set of RTEntry instances, keyed by destination_id.
     """
 
-    def __init__(self, timeout: float = 30.0, garbage: float = 30.0):
+    def __init__(self, timeout: float = 90.0, garbage: float = 90.0): # CHanged them from 30 and 30 to 90 and 60
         self._entries = {}  # dst_id -> RTEntry
         self._timeout = timeout
         self._garbage = garbage
@@ -102,21 +103,37 @@ class RoutingTable:
         If new: insert a fresh RTEntry.  
         If existing: update next_hop and metric, reset its timeout.
         """
-        
+        print(f"[UPDATE] Route to {destination_id} via {next_hop_id} updated. Metric={metric}")
         with self._lock:
             if destination_id not in self._entries:
-                e = RTEntry(destination_id,
-                            next_hop_id,
-                            metric,
-                            timeout=self._timeout,
-                            garbage=self._garbage)
+                e = RTEntry(destination_id, next_hop_id, metric, timeout=self._timeout, garbage=self._garbage)
                 self._entries[destination_id] = e
-
             else:
                 e = self._entries[destination_id]
-                e.next_hop_id = next_hop_id
-                e.metric = metric
-                e.reset_timeout()
+                # Always reset timer on receiving an update for the next_hop
+                if e.next_hop_id == next_hop_id:
+                    e.metric = metric  # Update metric (even if same)
+                    e.reset_timeout()  # Reset timeout on any valid update
+                elif metric < e.metric or next_hop_id == destination_id:
+                    # Better path or directly connected
+                    e.next_hop_id = next_hop_id
+                    e.metric = metric
+                    e.reset_timeout()
+        # print(f"[UPDATE] Route to {destination_id} via {next_hop_id} updated. Metric={metric}")
+        # with self._lock:
+        #     if destination_id not in self._entries:
+        #         e = RTEntry(destination_id,
+        #                     next_hop_id,
+        #                     metric,
+        #                     timeout=self._timeout,
+        #                     garbage=self._garbage)
+        #         self._entries[destination_id] = e
+
+        #     else:
+        #         e = self._entries[destination_id]
+        #         e.next_hop_id = next_hop_id
+        #         e.metric = metric
+        #         e.reset_timeout()
 
     def mark_unreachable(self, destination_id: int):
         """
