@@ -7,7 +7,7 @@ from RoutingTable import RoutingTable
 # Constants
 LOCAL_HOST = "127.0.0.1"
 PORT = 520
-HDR_SIZE = 4
+HDR_SIZE = 6
 RT_SIZE = 20 # Routing table size
 
 CMD_REQUEST = 1
