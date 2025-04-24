@@ -36,6 +36,7 @@ class RTEntry:
         # start the per‐entry timeout
         self.reset_timeout()
 
+
     def reset_timeout(self):
         """(Re)start the timeout timer."""
         
@@ -53,6 +54,7 @@ class RTEntry:
             self._garbage_timer.cancel()
         self.in_garbage = False
 
+
     def _on_timeout(self):
         """Called when the route times out—mark INF and start garbage."""
         self.metric = INF
@@ -63,9 +65,20 @@ class RTEntry:
         self._garbage_timer.daemon = True
         self._garbage_timer.start()
 
-    def _on_garbage(self):
+
+    def _on_garbage(self): # Noah - To complete this
         """Route fully aged out; caller (RoutingTable) will prune it."""
         # nothing here—RoutingTable will check `in_garbage` + age
+
+    ##################
+    def mark_unreachable(self):
+        self.metric = INF
+        self.timeout_timer = None  # Stop timeout timer
+        self.garbage_timer = time.time()  # Start garbage collection
+
+    def is_garbage(self):
+        return self.metric == INF and self.garbage_timer and (time.time() - self.garbage_timer) > self.garbage_interval
+    ###################
 
     def cancel_timers(self):
         if self._timeout_timer:
@@ -119,21 +132,7 @@ class RoutingTable:
                     e.next_hop_id = next_hop_id
                     e.metric = metric
                     e.reset_timeout()
-        # print(f"[UPDATE] Route to {destination_id} via {next_hop_id} updated. Metric={metric}")
-        # with self._lock:
-        #     if destination_id not in self._entries:
-        #         e = RTEntry(destination_id,
-        #                     next_hop_id,
-        #                     metric,
-        #                     timeout=self._timeout,
-        #                     garbage=self._garbage)
-        #         self._entries[destination_id] = e
 
-        #     else:
-        #         e = self._entries[destination_id]
-        #         e.next_hop_id = next_hop_id
-        #         e.metric = metric
-        #         e.reset_timeout()
 
     def mark_unreachable(self, destination_id: int):
         """
@@ -155,15 +154,20 @@ class RoutingTable:
         """
         Remove any entries whose garbage timer has expired.
         """
+        to_delete = []
+        for dst, entry in self._entries.items():
+            if entry.is_garbage():  # Checks if garbage timer expired
+                to_delete.append(dst)
+        for dst in to_delete:
+            del self._entries[dst]
 
-        with self._lock:
-            to_delete = [
-                dst for dst, e in self._entries.items() if e.is_dead()
-            ]
+        # with self._lock:
+        #     to_delete = [dst for dst, e in self._entries.items() if e.is_dead()]
 
-            for dst in to_delete:
-                e = self._entries.pop(dst)
-                e.cancel_timers()
+        #     for dst in to_delete:
+        #         e = self._entries.pop(dst)
+        #         e.cancel_timers()
+
 
     def __iter__(self):
         """

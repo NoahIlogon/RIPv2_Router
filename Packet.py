@@ -99,128 +99,7 @@ class Packet:
 
             packets.append(bytes(packet))
 
-
-
-
-        # for i in range(0, len(entries), 25):
-        #     entry_chunk = entries[i:i + 25]
-        #     packet = bytearray(6 + 20 * len(entry_chunk))
-
-        #     # Header
-        #     packet[0] = CMD_RESPONSE
-        #     packet[1] = 2
-        #     packet[2:4] = (0, 0)
-        #     packet[4] = (self.router_ID >> 8) & 0xFF
-        #     packet[5] = self.router_ID & 0xFF
-
-        #     cur_index = 6
-        #     for entry in entry_chunk:
-        #         if entry.destination_id == neighbour_id:
-        #             continue
-        #         # AFI + Route Tag
-        #         packet[cur_index] = 0
-        #         packet[cur_index + 1] = 2
-        #         packet[cur_index + 2] = 0
-        #         packet[cur_index + 3] = 0
-        #         cur_index += 4
-
-        #         # Destination ID (4 bytes)
-        #         packet[cur_index] = (entry.destination_id >> 24) & 0xFF
-        #         packet[cur_index + 1] = (entry.destination_id >> 16) & 0xFF
-        #         packet[cur_index + 2] = (entry.destination_id >> 8) & 0xFF
-        #         packet[cur_index + 3] = entry.destination_id & 0xFF
-        #         cur_index += 4
-
-        #         # Subnet Mask (8 bytes = 0s)
-        #         for i in range(8):
-        #             packet[cur_index + i] = 0
-        #         cur_index += 8
-        #         print(f"[DEBUG] Sending route to {entry.destination_id} via {entry.next_hop_id} to neighbour {neighbour_id}")
-        #         # Metric with poison reverse
-        #         if entry.next_hop_id == neighbour_id:
-        #             cost = INF
-        #         else:
-        #             cost = entry.metric
-                
-        #         packet[cur_index] = (cost >> 24) & 0xFF
-        #         packet[cur_index + 1] = (cost >> 16) & 0xFF
-        #         packet[cur_index + 2] = (cost >> 8) & 0xFF
-        #         packet[cur_index + 3] = cost & 0xFF
-        #         cur_index += 4
-
-        #     packets.append(bytes(packet))
-        
         return packets
-
-
-        # entries = list(self.routing_table)  # snapshot of RTEntry objects
-        # packets = []
-
-        # # If we have no entries at all, send a header‐only packet
-        # if not entries:
-        #     hdr = bytearray(6)
-        #     hdr[0] = CMD_RESPONSE          # Command = 2 (Response)
-        #     hdr[1] = 2                     # Version = 2
-        #     hdr[2] = 0                     # Reserved
-        #     hdr[3] = 0                     # Reserved
-        #     hdr[4] = (self.router_ID >> 8) & 0xFF
-        #     hdr[5] =  self.router_ID       & 0xFF
-        #     return [bytes(hdr)]
-
-        # # Otherwise, chunk into ≤25 entries per packet
-        # for i in range(0, len(entries), 25):
-        #     chunk = entries[i : i + 25]
-        #     pkt_len = 6 + 20 * len(chunk)
-        #     pkt = bytearray(pkt_len)
-
-        #     # --- HEADER (6 bytes) ---
-        #     pkt[0] = CMD_RESPONSE          # 0: command
-        #     pkt[1] = 2                     # 1: version
-        #     pkt[2] = 0                     # 2: reserved
-        #     pkt[3] = 0                     # 3: reserved
-        #     pkt[4] = (self.router_ID >> 8) & 0xFF
-        #     pkt[5] =  self.router_ID       & 0xFF
-
-        #     # --- ENTRIES (20 bytes each) ---
-        #     offset = 6
-        #     for e in chunk:
-        #         #  0–1: AFI = 0x0002
-        #         pkt[offset + 0] = 0
-        #         pkt[offset + 1] = 2
-
-        #         #  2–3: Route tag = 0
-        #         pkt[offset + 2] = 0
-        #         pkt[offset + 3] = 0
-
-        #         #  4–7: Destination ID (32‑bit big‑endian)
-        #         dst = e.destination_id
-        #         pkt[offset + 4] = (dst >> 24) & 0xFF
-        #         pkt[offset + 5] = (dst >> 16) & 0xFF
-        #         pkt[offset + 6] = (dst >>  8) & 0xFF
-        #         pkt[offset + 7] =  dst        & 0xFF
-
-        #         # 8–11: Subnet mask = 0.0.0.0
-        #         pkt[offset +  8 : offset + 12] = bytes((0, 0, 0, 0))
-
-        #         # 12–15: Next hop = 0.0.0.0
-        #         pkt[offset + 12 : offset + 16] = bytes((0, 0, 0, 0))
-
-        #         # 16–19: Metric, with split‐horizon (poison reverse)
-        #         # If this route’s next_hop == neighbour_id → advertise metric = INF
-        #         metric = INF if e.next_hop_id == neighbour_id else e.metric
-        #         pkt[offset + 16] = (metric >> 24) & 0xFF
-        #         pkt[offset + 17] = (metric >> 16) & 0xFF
-        #         pkt[offset + 18] = (metric >>  8) & 0xFF
-        #         pkt[offset + 19] =  metric        & 0xFF
-
-        #         offset += 20
-
-        #     packets.append(bytes(pkt))
-
-        # return packets
-
-
-
 
     
     def check_header(self, packet: bytes):
@@ -348,7 +227,7 @@ class Packet:
         if not addy:
             print("\n-------------Destiantion ID-------------")
             print(f"[ERROR] Invalid IPv4 Address: {IPv4_addy}!")
-            print("----------------------------------------")
+            print("------------------------------------------")
 
 
         subnet_mask_first = int(entry[8])  # First Byte of subnet mask
@@ -362,10 +241,11 @@ class Packet:
                 print(f"[ERROR] Invalid byte in Subnet Mask {byte}! It must be between 0-255 inclusive.")
                 mask = False
                 passed = False
+
         if not mask:
             print("\n-------------Subnet Mask-------------")
             print(f"[ERROR] Bad subnet mask bytes: {subnet_mask}")
-            print("-------------------------------------")
+            print("---------------------------------------")
 
        
 
@@ -410,10 +290,7 @@ class Packet:
         # 2) How many 20‐byte entries?
         num_entries = (len(packet) - 6) // RT_SIZE
         print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
-        # for idx in range(num_entries):
-        #     start = 6 + idx * RT_SIZE
-        #     end   = start + RT_SIZE
-        #     entry = packet[start:end]
+      
         for entry_index in range(num_entries):
             if packet_size > 25:
                 print("ERROR: Invalid packet length")
@@ -467,13 +344,6 @@ class Packet:
             else:
                 self.routing_table.add_or_update(dest_id, received_ID, new_metric)
             
-            # if new_metric >= INF:
-            #     self.routing_table.mark_unreachable(dest_id)
-            # else:
-            #     self.routing_table.add_or_update(dest_id,
-            #                                     received_ID,
-            #                                     new_metric)
-        
         print("Packet Check Passed!\n")
         # Optionally: prune dead entries and/or trigger triggered update
         self.routing_table.prune()

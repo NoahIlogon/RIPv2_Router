@@ -113,11 +113,6 @@ def read_router_ID(config_data):
     if not (1 <= router_id <= 64000):
         raise Exception("ERROR: Router ID must be within the range of 1 - 64000..")
         
-    ########################### Change
-    # if router_id in ROUTER_ID_LIST:
-    #     raise Exception("ERROR: Router ID is already taken..")
-    ###########################
-    
     global ROUTER_ID
     ROUTER_ID = router_id
     return router_id
@@ -214,7 +209,6 @@ def create_socket(ports):
 
 if __name__ == "__main__":
     init_daemon()
-    # router_instance = RIPv2_router(ROUTER_ID, ROUTER_INPUTS, ROUTER_OUTPUTS)
     router_instance = RIPv2_Router(ROUTER_ID, ROUTER_INPUTS, ROUTER_OUTPUTS)
-    router_instance.monitor_RT()  # Start listening for updates
+    router_instance.monitor_RT()  # Start listening for updates INF loop
 

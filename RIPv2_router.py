@@ -101,14 +101,6 @@ class RIPv2_Router:
         # now start periodic updates
         self.init_periodic_update()
 
-
-        
-
-        # self.packet_manager = Packet(self.routing_table,
-        #                             self.router_ID,
-        #                             self.outputs,
-        #                             self.sockets)
-
         self.init_periodic_update() # periodic update loop is initialised
 
         
@@ -147,41 +139,16 @@ class RIPv2_Router:
                 calls helper function to send an update to 
                 all the neighbour routers
             '''
+            self.routing_table.prune()  # Prune dead entries 
             self.update_neighbours()
             print("Update packet Sent")
             self.init_periodic_update()
 
         plus_minus = random.uniform(0, 5)  # offset by a small random time (+/- 0 to 5 seconds)
-        self.periodic_updates = Timer(30 + plus_minus, send_update) # Triggers to send an update every 30 seconds
+        self.periodic_updates = Timer(10 + plus_minus, send_update) # Triggers to send an update every 30 seconds
         self.periodic_updates.start() # This triggers the timer to start (which is the line above)
     
 
-    # def update_neighbours(self):
-    #     '''
-    #         sends an update packet to all neighbours
-    #     '''
-    #     for link in self.outputs:  # EXAMPLE: link = ['5000', '1', '1']
-    #         port = int(link[0])
-    #         metric = int(link[1])
-    #         neighbour_id = int(link[2])
-
-    #         packet = self.packet_manager.create_packet({
-    #             'router_id': neighbour_id,
-    #             'metric': metric
-    #         })
-
-    #         if not packet:
-    #             print(f"[!] No Packet created for Router: {neighbour_id}")
-
-    #         try:
-    #             send_to_socket = self.sockets[self.inputs[0]]
-    #             send_to_socket.sendto(packet, (LOCAL_HOST, port))
-
-    #         except Exception as e:
-    #             print(f"[ERROR] Sending to Router: {neighbour_id} - Port: {port}\n {e}\n") 
-
-    #         else:
-    #             print(f"[SUCCESS] Packet sent to Router: {neighbour_id} - Port: {port}\n")
     ######################## Testing 
     def update_neighbours(self):
         """
@@ -222,59 +189,6 @@ class RIPv2_Router:
                     print(f"[ERROR] Sending to {neigh_id}@{out_port}: {e}")
 
 
-
-    ########################
-
-        # Sorry Bro had to comment thsi out but I copied lots of tit form you :)
-        # for link in self.outputs: # ROUTER_OUTPUTS
-        #     neighbour_id = link['Router-ID']
-        #     port = link['Port']
-
-        #     packet = self.packet_manager.create_packet(neighbour_id)
-
-        #     if not packet:
-        #         print(f"[!] No Packet created for Router: {neighbour_id}")
-
-        #     try:
-        #         send_to_socket = self.sockets[self.inputs[0]]
-        #         send_to_socket.sendto(packet, (LOCAL_HOST, port))
-
-        #     except Exception as e:
-        #         print(f"[ERROR] Sending to Router: {neighbour_id} - Port: {port}\n {e}\n") 
-
-        #     else: # Packet successfully sent to socket
-        #         print(f"[SUCCESS] Packet sent to Router: {neighbour_id} - Port: {port}\n")
-
-                
-
-        
-
-
-#     #######################################
-# '''
-#     ████████╗██╗███╗   ███╗███████╗██████╗ 
-#     ╚══██╔══╝██║████╗ ████║██╔════╝██╔══██╗
-#        ██║   ██║██╔████╔██║█████╗  ██████╔╝
-#        ██║   ██║██║╚██╔╝██║██╔══╝  ██╔══██╗
-#        ██║   ██║██║ ╚═╝ ██║███████╗██║  ██║
-#        ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝     
-#     30s                                 
-# '''
-
-
-    # def init_timer(self, dst_id):
-    #     '''
-    #         Timer is Initialised
-    #     '''
-        
-    #     if dst_id in self.timeout_timer:
-    #         self.timeout_timer[dst_id]
-    
-
-    ####################### Listen respond and listen to incoming packets
-
-
-
     def monitor_RT(self): 
         '''
             This is an infinite loop where we will listen for updates in the sockets and process updates
@@ -284,8 +198,7 @@ class RIPv2_Router:
         while True: 
             readable, _, _ = select.select(list(self.sockets.values()), [], [], 1.0)
             
-            # if readable:
-            #     print(f"[DEBUG] {len(readable)} socket(s) ready: {list(self.sockets.keys())}")
+
             
             for sock in readable:
                 try:
