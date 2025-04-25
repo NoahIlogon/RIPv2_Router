@@ -14,6 +14,7 @@ from Packet import *
 
 
 import random
+import time
 ################################# 
 
 
@@ -29,7 +30,7 @@ import random
 '''
 
 LOCAL_HOST = "127.0.0.1"
-
+STATUS_PRINT_INTERVAL = 5.0
 # PERIODIC_UPDATES = None
 
 
@@ -45,6 +46,7 @@ class RIPv2_Router:
         self.garbage_time = garbage_time
         self.timeout_timer = {} # Dict
         self.garbage_time = {} # Dict
+
 
         # Create input sockets
         self.sockets = self.create_sockets()
@@ -71,19 +73,15 @@ class RIPv2_Router:
                                      neigh_map,
                                      self.sockets)
         
-        for link in self.outputs:           # e.g. ['6110','1','1']
-            port, metric_s, neigh_id_s = link
-            neigh_id = int(neigh_id_s)
-            cost     = int(metric_s)
-            # directly connected → next_hop is the neighbour itself
-            self.routing_table.add_or_update(neigh_id, neigh_id, cost)
+        # for link in self.outputs:           # e.g. ['6110','1','1']
+        #     port, metric_s, neigh_id_s = link
+        #     neigh_id = int(neigh_id_s)
+        #     cost     = int(metric_s)
+        #     # directly connected → next_hop is the neighbour itself
+        #     self.routing_table.add_or_update(neigh_id, neigh_id, cost)
 
 
-        print("Router Daemon Initialised...\n")
-        print(f"Router: {self.router_ID}\n")
-        print(f"Inputs: {self.inputs}\n")
-        print(f"Outputs: {self.outputs}\n")
-
+        
         print("Seeding directly‐connected neighbours into routing table:")
         for port_s, metric_s, neigh_id_s in self.outputs:
             neigh_id = int(neigh_id_s)
@@ -94,16 +92,49 @@ class RIPv2_Router:
             self.routing_table.add_or_update(neigh_id,
                                             neigh_id,
                                             cost)
+            
+        print("Router Daemon Initialised...\n")
+        print(f"Router: {self.router_ID}\n")
+        print(f"Inputs: {self.inputs}\n")
+        print(f"Outputs: {self.outputs}\n")
+
 
         # Show the table immediately:
         self.routing_table.print_table()
 
-        # now start periodic updates
-        self.init_periodic_update()
+        self.periodic_updates = None 
+        self.init_periodic_update() 
 
-        self.init_periodic_update() # periodic update loop is initialised
+        # You might have a duplicate call to init_periodic_update() here - REMOVE IT if present
+        # self.init_periodic_update() # <--- REMOVE THIS DUPLICATE CALL if you have it
+        # --- ADD THIS BLOCK AFTER THE ABOVE init_periodic_update() CALL ---
+        # Setup Periodic Status Printing Timer
+        self._status_timer = None 
+        self._start_status_timer()
 
-        
+########################
+    def _start_status_timer(self):
+        """Starts the periodic timer for printing the routing table status."""
+        # Ensure any existing timer is cancelled before starting a new one
+        if self._status_timer:
+            self._status_timer.cancel()
+
+        self._status_timer = Timer(STATUS_PRINT_INTERVAL, self._print_status)
+        self._status_timer.daemon = True # Allow program to exit even if this timer is running
+        self._status_timer.start()
+
+    def _print_status(self):
+        """Callback function for the status timer - prints the table and reschedules."""
+        print("\n--- Periodic Status Update ---") # Add a marker for periodic prints
+        self.routing_table.print_table()
+        print("------------------------------\n")
+
+        # Reschedule the timer to run again
+        self._start_status_timer()
+
+########################
+
+
     def receive_packet(self, data):
         # upon arrival:
         self.packet_manager.receive_and_process_packet(data)
@@ -122,6 +153,7 @@ class RIPv2_Router:
         try:
             for port in self.inputs:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.setblocking(False) # make it non blocking
                 sock.bind((LOCAL_HOST, port))
                 sockets_list[port] = sock
             return sockets_list
@@ -134,19 +166,63 @@ class RIPv2_Router:
         '''
             Starts the update loop & sends update to neighbours
         '''
+
         def send_update():
             '''
                 calls helper function to send an update to 
-                all the neighbour routers
+                all the neighbour routers and refreshes direct routes
             '''
-            self.routing_table.prune()  # Prune dead entries 
-            self.update_neighbours()
-            print("Update packet Sent")
-            self.init_periodic_update()
+            # --- ADD THIS LOGIC: Refresh Direct Routes ---
+            # Ensure direct connections are always in the table with correct metric
+            print("[INFO] Refreshing direct routes...")
+            for port_s, metric_s, neigh_id_s in self.outputs:
+                 neigh_id = int(neigh_id_s)
+                 cost     = int(metric_s)
+                 # Calling add_or_update with the direct link info.
+                 # This updates or re-adds the entry and resets its timer.
+                 # The next hop for a direct route is the neighbour itself.
+                 self.routing_table.add_or_update(neigh_id, neigh_id, cost)
+            # Optional: Print table after refreshing direct routes to see them active
+            # self.routing_table.print_table()
+            # --- END NEW LOGIC ---
 
-        plus_minus = random.uniform(0, 5)  # offset by a small random time (+/- 0 to 5 seconds)
-        self.periodic_updates = Timer(10 + plus_minus, send_update) # Triggers to send an update every 30 seconds
-        self.periodic_updates.start() # This triggers the timer to start (which is the line above)
+            self.routing_table.prune()  # Prune dead entries *before* sending
+            self.update_neighbours() # This sends updates based on the *current* table state
+            print("Update packet Sent")
+
+            # Reschedule the next periodic update
+            # Use the periodic time from config if available (e.g., Router 1 config has 10s)
+            # Otherwise, use a default (e.g., 30s is common, you have 10 + random 0-5 now)
+            # Let's use 10 + random 0-5 as you have it currently
+            periodic_interval = 10 # Base interval
+            plus_minus = random.uniform(0, 5) # Random offset 0-5s
+            self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
+            self.periodic_updates.daemon = True # Ensure timer doesn't prevent exit
+            self.periodic_updates.start()
+
+
+        # You are calling init_periodic_update twice in __init__
+        # self.init_periodic_update() # <-- Remove this duplicate call
+        # The first call below is sufficient
+        periodic_interval = 10 # Base interval from R1 config
+        plus_minus = random.uniform(0, 5) # Random offset 0-5s
+        self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
+        self.periodic_updates.daemon = True
+        self.periodic_updates.start()
+
+        # def send_update():
+        #     '''
+        #         calls helper function to send an update to 
+        #         all the neighbour routers
+        #     '''
+        #     self.routing_table.prune()  # Prune dead entries 
+        #     self.update_neighbours()
+        #     print("Update packet Sent")
+        #     self.init_periodic_update()
+
+        # plus_minus = random.uniform(0, 5)  # offset by a small random time (+/- 0 to 5 seconds)
+        # self.periodic_updates = Timer(10 + plus_minus, send_update) # Triggers to send an update every 30 seconds
+        # self.periodic_updates.start() # This triggers the timer to start (which is the line above)
     
 
     ######################## Testing 
@@ -183,7 +259,7 @@ class RIPv2_Router:
             for pkt in packets:
                 try:
                     send_sock.sendto(pkt, (LOCAL_HOST, out_port))
-                    print(f"[→] Sent {len(pkt)} bytes to Router {neigh_id} "
+                    print(f"[Sent]  {len(pkt)} bytes to Router {neigh_id} "
                         f"on port {out_port}")
                 except Exception as e:
                     print(f"[ERROR] Sending to {neigh_id}@{out_port}: {e}")
@@ -199,27 +275,27 @@ class RIPv2_Router:
             readable, _, _ = select.select(list(self.sockets.values()), [], [], 1.0)
             
 
-            
-            for sock in readable:
-                try:
-                    data, addr = sock.recvfrom(1024)
-                    # print(f"[DEBUG] Got {len(data)} bytes from {addr} on local port {sock.getsockname()[1]}")
+            if readable:    
+                for sock in readable:
+                    try:
+                        data, addr = sock.recvfrom(4096)
+                        # print(f"[DEBUG] Got {len(data)} bytes from {addr} on local port {sock.getsockname()[1]}")
 
-                    local_port = sock.getsockname()[1]
-                    print(f"[RX] Got {len(data)} bytes on local port {local_port} from {addr}")
+                        local_port = sock.getsockname()[1]
+                        print(f"[Received] Got {len(data)} bytes on local port {local_port} from {addr}")
 
 
-                    print(f"Received packet from {addr}\n")
-                    self.packet_manager.receive_and_process_packet(data)
-                    print("Routing Table Updated...\n")
+                        print(f"Received packet from {addr}\n")
+                        self.packet_manager.receive_and_process_packet(data)
+                        print("Routing Table Updated...\n")
 
-                    self.routing_table.prune()
+                        self.routing_table.prune()
 
-                    self.routing_table.print_table()
-                    
+                        self.routing_table.print_table()
+                        
 
-                except Exception as e:
-                    print(f"Error receiving data: {e}")
+                    except Exception as e:
+                        print(f"Error receiving data: {e}")
 
 
 

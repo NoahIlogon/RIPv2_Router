@@ -276,74 +276,146 @@ class Packet:
         return passed
 
 
-    def receive_and_process_packet(self, packet: bytes):
-        print("Packet Recieved Succesfully! \n"
-        "Checking for Validity!...")
+    # def receive_and_process_packet(self, packet: bytes):
+        # print("Packet Recieved Succesfully! \n"
+        # "Checking for Validity!...")
      
-        packet_size = 0
+        # packet_size = 0
+        # received_ID = self.check_header(packet)–
+        #     print("[ERROR] Packet Header Check Failed!\n")
+        #     return
+        # print(f"[✓] Received update from Router {received_ID}")
+        
+        # # 2) How many 20‐byte entries?
+        # num_entries = (len(packet) - 6) // RT_SIZE
+        # print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
+      
+        # for entry_index in range(num_entries):
+        #     if packet_size > 25:
+        #         print("ERROR: Invalid packet length")
+        #         return
+        #     entry_start_index = 6 + entry_index * RT_SIZE # (Start of Example) 1. Start at 6 + 0 * 20 = 6 | 2. 6 + 1 * 20 = 26...
+        #     entry_end_index = entry_start_index + RT_SIZE # 1. Then 6 + 20 = 26 | 2. 26 + 20 = 46...
+        #     entry = packet[entry_start_index:entry_end_index] # 1. So 6-26 | 2. 26-46... | Checks every 20bytes (End of Example)
+        #     packet_size += 1
+
+        #     if not self.check_entry(entry):
+        #         # If entry invalid, log the error and drop the packet
+        #         print(f"ERROR: Invalid or empty entry at index {entry_index} (starting at byte {entry_start_index}). \n"
+        #         "Dropping Packet!...")
+        #         return
+
+        #     # 2b) Parse fields
+        #     dest_id = int.from_bytes(entry[4:8], 'big')
+        #     metric  = int.from_bytes(entry[16:20], 'big')
+
+        #     # 3) Find cost to the sender (received_ID) in our RT
+        #     cost = None
+        #     for route in self.routing_table:
+        #         if route.destination_id == received_ID:
+        #             cost = route.metric
+        #             break
+
+        #     # 3a) Fallback: cost = link‐metric from self.neighbours
+        #     if cost is None:
+        #         cost = self.neighbours.get(received_ID, INF)
+
+        #     # 4) New metric = recv_metric + link_cost (cap at INF)
+        #     new_metric = min(metric + cost, INF)
+
+        #     # 5) Apply split‐horizon: if next_hop == received_ID, poison
+        #     #    (your create_response already handles that; here we just update)
+        #     entry_obj = None
+
+        #     # Loop through routing table entries to find the destination
+        #     for entry in self.routing_table:
+        #         if entry.destination_id == dest_id:
+        #             entry_obj = entry
+        #             break
+
+        #     # If we found the entry, reset its timeout
+        #     if entry_obj:
+        #         entry_obj.reset_timeout()
+
+        #     # Now handle the metric update logic
+        #     if new_metric >= INF:
+        #         self.routing_table.mark_unreachable(dest_id)
+        #     else:
+        #         self.routing_table.add_or_update(dest_id, received_ID, new_metric)
+            
+        # print("[Success] Packet Check Passed.. \n")
+        # # Optionally: prune dead entries and/or trigger triggered update
+        # self.routing_table.prune()
+    
+    def receive_and_process_packet(self, packet: bytes):
+        print("Packet Received Succesfully! \n"
+        "Checking for Validity!...")
+
         received_ID = self.check_header(packet)
         if not received_ID:
             print("[ERROR] Packet Header Check Failed!\n")
-            return
+            return # Drop the packet if header is invalid
+
         print(f"[✓] Received update from Router {received_ID}")
-        
+
+        # Ensure the sender is a direct neighbour
+        # We need the link cost to the neighbour to add it to received metrics
+        link_cost_to_sender = self.neighbours.get(received_ID)
+        if link_cost_to_sender is None:
+            print(f"[WARN] Received update from non-neighbour {received_ID}. Ignoring packet.")
+            return # Ignore updates from non-neighbours
+
         # 2) How many 20‐byte entries?
-        num_entries = (len(packet) - 6) // RT_SIZE
+        packet_len = len(packet)
+        if packet_len < HDR_SIZE or (packet_len - HDR_SIZE) % RT_SIZE != 0:
+            print(f"[ERROR] Invalid packet length: {packet_len}. Must be 6 + N * 20.")
+            return
+
+        num_entries = (packet_len - HDR_SIZE) // RT_SIZE
         print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
-      
+
+        # Process each route entry in the packet
         for entry_index in range(num_entries):
-            if packet_size > 25:
-                print("ERROR: Invalid packet length")
-                return
-            entry_start_index = 6 + entry_index * RT_SIZE # (Start of Example) 1. Start at 6 + 0 * 20 = 6 | 2. 6 + 1 * 20 = 26...
-            entry_end_index = entry_start_index + RT_SIZE # 1. Then 6 + 20 = 26 | 2. 26 + 20 = 46...
-            entry = packet[entry_start_index:entry_end_index] # 1. So 6-26 | 2. 26-46... | Checks every 20bytes (End of Example)
-            packet_size += 1
+            entry_start_index = HDR_SIZE + entry_index * RT_SIZE
+            entry_end_index = entry_start_index + RT_SIZE
+            entry_bytes = packet[entry_start_index:entry_end_index]
 
-            if not self.check_entry(entry):
-                # If entry invalid, log the error and drop the packet
-                print(f"ERROR: Invalid or empty entry at index {entry_index} (starting at byte {entry_start_index}). \n"
-                "Dropping Packet!...")
-                return
+            if not self.check_entry(entry_bytes):
+                # If entry invalid, log the error and skip this entry.
+                print(f"[ERROR] Invalid entry at index {entry_index} (starting at byte {entry_start_index}). Skipping this entry.")
+                continue # Skip this invalid entry, continue with the next one
 
-            # 2b) Parse fields
-            dest_id = int.from_bytes(entry[4:8], 'big')
-            metric  = int.from_bytes(entry[16:20], 'big')
+            # 2b) Parse fields from the entry
+            dest_id = int.from_bytes(entry_bytes[4:8], 'big')
+            received_metric  = int.from_bytes(entry_bytes[16:20], 'big')
 
-            # 3) Find cost to the sender (received_ID) in our RT
-            cost = None
-            for route in self.routing_table:
-                if route.destination_id == received_ID:
-                    cost = route.metric
-                    break
+            # 4) Calculate the new metric for *our* table: received_metric + link_cost_to_sender (cap at INF)
+            # RIP adds the cost of the incoming interface (the link to the sender)
+            # If the received metric is already INF, the new metric is also INF.
+            if received_metric >= INF:
+                new_metric = INF
+            else:
+                new_metric = min(received_metric + link_cost_to_sender, INF)
 
-            # 3a) Fallback: cost = link‐metric from self.neighbours
-            if cost is None:
-                cost = self.neighbours.get(received_ID, INF)
-
-            # 4) New metric = recv_metric + link_cost (cap at INF)
-            new_metric = min(metric + cost, INF)
-
-            # 5) Apply split‐horizon: if next_hop == received_ID, poison
-            #    (your create_response already handles that; here we just update)
-            entry_obj = None
-
-            # Loop through routing table entries to find the destination
-            for entry in self.routing_table:
-                if entry.destination_id == dest_id:
-                    entry_obj = entry
-                    break
-
-            # If we found the entry, reset its timeout
-            if entry_obj:
-                entry_obj.reset_timeout()
-
-            # Now handle the metric update logic
+            # 5) Update the routing table based on the new metric and the source neighbour (received_ID)
+            # The add_or_update method handles the timer reset logic correctly:
+            # - Resets timer if the update is from the current next hop.
+            # - Updates route and resets timer if a better path is found.
+            # - Does nothing (but timer still ticks) if the received route is worse.
+            #
+            # If the new metric to the destination via this neighbour is INF, mark it unreachable.
+            # This handles cases where a neighbour explicitly sends an INF metric or the calculated metric exceeds INF.
             if new_metric >= INF:
                 self.routing_table.mark_unreachable(dest_id)
             else:
+                # Otherwise, add or update the route through this neighbour
                 self.routing_table.add_or_update(dest_id, received_ID, new_metric)
-            
+
+
         print("Packet Check Passed!\n")
-        # Optionally: prune dead entries and/or trigger triggered update
+        # Prune dead entries whose garbage timers have expired after processing updates
         self.routing_table.prune()
+
+        # Optional: Trigger a triggered update if there were significant changes to the routing table.
+        # This is not strictly required by the core RIP timeout/garbage mechanism but is good practice.
+        # self.update_neighbours() # Uncomment if you want triggered updates on receiving packets
