@@ -1,4 +1,0 @@
-[ConfigFile]
-Router-ID = 2
-Input-Ports = 6110, 6201, 7345
-Output-Ports = 5555-1-1, 5243-5-4
