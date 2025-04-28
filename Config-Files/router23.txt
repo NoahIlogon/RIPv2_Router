@@ -1,0 +1,4 @@
+[ConfigFile]
+Router-ID = 3
+Input-Ports = 5003
+Output-Ports = 5002-1-2, 5004-1-4, 5005-1-5

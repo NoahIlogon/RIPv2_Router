@@ -1,0 +1,7 @@
+[ConfigFile]
+Router-ID = 2
+Input-Ports = 5002
+Output-Ports = 5001-1-1
+Periodic-Time = 30
+Timeout = 90
+Garbage = 60
