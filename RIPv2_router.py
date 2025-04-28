@@ -94,7 +94,7 @@ class RIPv2_Router:
         # Show the table immediately:
         self.routing_table.print_table()
 
-        self.periodic_updates = None 
+        # self.periodic_updates = None 
         self.init_periodic_update() 
 
 
@@ -180,11 +180,7 @@ class RIPv2_Router:
             self.periodic_updates.start()
 
         
-        initial_delay = random.uniform(-5, 5)
-        self.periodic_updates = Timer(initial_delay, send_update)
-        self.periodic_updates.daemon = True
-        self.periodic_updates.start()
-
+        send_update()
         # periodic_interval = 10 # Base interval from R1 config
         # plus_minus = random.uniform(0, 5) # Random offset 0-5s
         # self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)

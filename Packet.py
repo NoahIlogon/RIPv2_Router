@@ -86,7 +86,7 @@ class Packet:
                     packet[cur_index + j] = 0
                 cur_index += 8
 
-                print(f"[DEBUG] Sending route to {entry.destination_id} via {entry.next_hop_id} to neighbour {neighbour_id}")
+                # print(f"[DEBUG] Sending route to {entry.destination_id} via {entry.next_hop_id} to neighbour {neighbour_id}")
                 
                 # Metric with poison reverse
                 cost = INF if entry.next_hop_id == neighbour_id else entry.metric
@@ -241,13 +241,13 @@ class Packet:
             print("[ERROR] Packet Header Check Failed!\n")
             return # Drop the packet if header is invalid
 
-        print(f"[✓] Received update from Router {received_ID}")
+        # print(f"[✓] Received update from Router {received_ID}")
 
         # Ensure the sender is a direct neighbour
         # We need the link cost to the neighbour to add it to received metrics
         link_cost_to_sender = self.neighbours.get(received_ID)
         if link_cost_to_sender is None:
-            print(f"[WARN] Received update from non-neighbour {received_ID}. Ignoring packet.")
+            print(f"[ERROR] Received update from non-neighbour {received_ID}. Ignoring packet.")
             return # Ignore updates from non-neighbours
 
         # 2) How many 20‐byte entries?
@@ -257,7 +257,7 @@ class Packet:
             return
 
         num_entries = (packet_len - HDR_SIZE) // RT_SIZE
-        print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
+        # print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
 
         # Process each route entry in the packet
         for entry_index in range(num_entries):
