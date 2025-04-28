@@ -75,30 +75,12 @@ class RTEntry:
             self._garbage_timer.start()
             print(f"[DEBUG] Garbage timer initiated for {self.destination_id} ({self._garbage_interval:.1f}s)")
 
-        # self.metric = INF
-        # print(f"[TIMEOUT] Route to {self.destination_id} timed out. Metric set to INF.")
-        # self.in_garbage = True
-        # self._garbage_timer = threading.Timer(self._garbage_interval,
-        #                                       self._on_garbage)
-        # self._garbage_timer.daemon = True
-        # self._garbage_timer.start()
 
 
     def _on_garbage(self): # Noah - To complete this
         """Route has expired and will need to be pruned"""
         print(f"[Garbage] Route to {self.destination_id} has expired and will be pruned..\n")
-        # nothing here—RoutingTable will check `in_garbage` + age
 
-    ##################
-    # def mark_unreachable(self):
-    #     self.metric = INF
-    #     if self._timeout_timer:
-    #         self._timeout_timer.cancel()
-        
-    #     self.in_garbage = True
-    #     self._garbage_timer = threading.Timer(self._garbage_timer, self._on_garbage)
-    #     self._garbage_timer.daemon = True
-    #     self._garbage_timer.start()
 
     def mark_unreachable(self):
         """Mark the route with metric INF and initiate the garbage timer if not already."""
@@ -120,9 +102,6 @@ class RTEntry:
                  self._garbage_timer.start()
                  print(f"[DEBUG] Garbage timer initiated (mark_unreachable) for {self.destination_id} ({self._garbage_interval:.1f}s)")
 
-    # def is_garbage(self):
-    #     return self.metric == INF and self._garbage_timer is not None and not self._garbage_timer.is_alive
-    ###################
 
     def cancel_timers(self):
         """Cancel both timeout and garbage timers."""
@@ -132,11 +111,6 @@ class RTEntry:
         if self._garbage_timer:
             self._garbage_timer.cancel()
             self._garbage_start_time = None
-    # def cancel_timers(self):
-    #     if self._timeout_timer:
-    #         self._timeout_timer.cancel()
-    #     if self._garbage_timer:
-    #         self._garbage_timer.cancel()
 
     def is_dead(self) -> bool:
         """After garbage_interval has elapsed, this entry is ready for removal."""
@@ -215,31 +189,16 @@ class RoutingTable:
         with self._lock:
 
             if destination_id not in self._entries:
+
                 print(f"[UPDATE] New route to {destination_id} via {next_hop_id} added with metric {metric}")
                 e = RTEntry(destination_id, next_hop_id, metric, timeout=self._timeout, garbage=self._garbage)
+
                 self._entries[destination_id] = e
 
-            # else:
-            #     e = self._entries[destination_id]
-            #     # Always reset timer on receiving an update for the next_hop
-            #     if e.next_hop_id == next_hop_id:
-            #         e.metric = metric  # Update metric (even if same)
-            #         e.reset_timeout()  # Reset timeout on any valid update
-            #     elif metric < e.metric or next_hop_id == destination_id:
-            #         # Better path or directly connected
-            #         e.next_hop_id = next_hop_id
-            #         e.metric = metric
-            #         e.reset_timeout()
 
             else:
-                # Existing entry: check if update is better or from current next hop
                 e = self._entries[destination_id]
 
-                # RIP Update Rules:
-                # 1. If update is from the current next hop, accept it (even if metric is same or worse, unless INF)
-                # 2. If update is from a different next hop, accept only if metric is better
-                # 3. If update is from the current next hop and metric is INF, mark unreachable.
-                # 4. If update is from a different next hop and metric is INF, ignore it UNLESS our current metric is > INF
 
                 current_metric = e.metric
                 is_from_current_next_hop = (e.next_hop_id == next_hop_id)
@@ -277,28 +236,11 @@ class RoutingTable:
                 e = self._entries[destination_id]
                 # Use the method on the entry object to handle timer transitions
                 e.mark_unreachable()
-        # with self._lock:
-        #     if destination_id in self._entries:
-        #         e = self._entries[destination_id]
-        #         e.metric = INF
-        #         e.in_garbage = True
-                
-        #         # start garbage countdown immediately
-        #         e._garbage_timer = threading.Timer(self._garbage,
-        #                                            lambda: None)
-        #         e._garbage_timer.daemon = True
-        #         e._garbage_timer.start()
 
     def prune(self):
         """
         Remove any entries whose garbage timer has expired.
         """
-        # to_delete = []
-        # for dst, entry in self._entries.items():
-        #     if entry.is_garbage():  # Checks if garbage timer expired
-        #         to_delete.append(dst)
-        # for dst in to_delete:
-        #     del self._entries[dst]
 
         with self._lock:
             to_delete = [dst for dst, e in self._entries.items() if e.is_dead()]
@@ -308,23 +250,7 @@ class RoutingTable:
                 e = self._entries.pop(dst)
                 e.cancel_timers()
 
-    # def __iter__(self):
-    #     """
-    #     Iterate current RTEntry objects (thread‐safe snapshot).
-    #     """
-    #     with self._lock:
-    #         return iter(list(self._entries.values()))
 
-    # def __len__(self):
-    #     with self._lock:
-    #         return len(self._entries)
-
-    # def __repr__(self):
-    #     with self._lock:
-    #         lines = ["RoutingTable:"]
-    #         for e in self._entries.values():
-    #             lines.append("  " + repr(e))
-    #         return "\n".join(lines)
 ############################
 
     def __iter__(self):

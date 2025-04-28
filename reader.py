@@ -28,7 +28,7 @@ router_ID's of all routers are distinct
 import sys
 import os
 import configparser
-from RIPv2_router import * # We will call this to initialise the daemon
+from RIPv2_router import * # call this to initialise the daemon
 from collections import Counter
 
 # import RIPv2_router
@@ -70,9 +70,6 @@ def init_daemon():
     print("\nConfiguration File Accepted ")
     print("\n#######################\n")
     
-    ################################# Under Construction
-    # router_instance = RIPv2_Router(router_id, ROUTER_INPUTS, ROUTER_OUTPUTS, )
-    #################################
 
 def read_config_file(config_file):
     '''
@@ -85,7 +82,7 @@ def read_config_file(config_file):
         content.read(config_file)
 
     except configparser.ParsingError:
-        print("Whats that?... Whats a config file?")
+        print("[ERROR] Invalid File\n")
         sys.exit()
 
     return content
@@ -101,7 +98,7 @@ def read_router_ID(config_data):
         router_id = int(config_data.get("ConfigFile", "Router-ID")) # Finds the value under Router-ID field
 
     except configparser.ParsingError as e:
-        print(f"ERROR parsing the config file: {e}")
+        print(f"[ERROR] parsing the config file: {e}")
         sys.exit()
 
     except KeyError:
