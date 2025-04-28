@@ -173,18 +173,23 @@ class RIPv2_Router:
             self.update_neighbours() # This sends updates based on the *current* table state
             print("Update packet Sent")
 
-            periodic_interval = 10 # Base interval
-            plus_minus = random.uniform(0, 5) # Random offset 0-5s
+            periodic_interval = 30 # Base interval
+            plus_minus = random.uniform(-5, 5) # Random offset 0-5s
             self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
             self.periodic_updates.daemon = True # Ensure timer doesn't prevent exit
             self.periodic_updates.start()
 
-
-        periodic_interval = 10 # Base interval from R1 config
-        plus_minus = random.uniform(0, 5) # Random offset 0-5s
-        self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
+        
+        initial_delay = random.uniform(-5, 5)
+        self.periodic_updates = Timer(initial_delay, send_update)
         self.periodic_updates.daemon = True
         self.periodic_updates.start()
+
+        # periodic_interval = 10 # Base interval from R1 config
+        # plus_minus = random.uniform(0, 5) # Random offset 0-5s
+        # self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
+        # self.periodic_updates.daemon = True
+        # self.periodic_updates.start()
 
     
 
