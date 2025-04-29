@@ -28,7 +28,7 @@ LOCAL_HOST = '127.0.0.1'
 ROUTER_ID = None
 ROUTER_INPUTS = []
 ROUTER_OUTPUTS = []
-
+ROUTER_ID_CHECK_PORT_BASE = 7777 
 
 def init_daemon():
     '''
@@ -76,6 +76,29 @@ def read_config_file(config_file):
         sys.exit()
 
     return content
+
+
+def check_router_id_taken(router_id): 
+
+    ''' 
+
+    Tries to bind a unique socket based on the Router ID. 
+
+    If bind fails, it means Router ID is already taken. 
+
+    ''' 
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+
+    try: 
+
+        sock.bind((LOCAL_HOST, ROUTER_ID_CHECK_PORT_BASE + router_id)) 
+
+    except OSError: 
+
+        sys.exit(f"ERROR: Router ID {router_id} already taken. Another router is using it.") 
+
+    return sock # Keep the socket open to reserve the ID 
 
 
 def read_router_ID(config_data):
@@ -190,6 +213,7 @@ def read_output_ports(config_file):
 
 if __name__ == "__main__":
     init_daemon()
+    id_check_socket = check_router_id_taken(ROUTER_ID) 
     router_instance = RIPv2_Router(ROUTER_ID, ROUTER_INPUTS, ROUTER_OUTPUTS)
     router_instance.monitor_RT()  # Start listening for updates (INF loop)
 

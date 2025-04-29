@@ -7,7 +7,6 @@ Filename: RIPv2_router.py
 from socket import *
 import select
 
-# from reader import read_config_file, read_input_ports
 from threading import Timer
 from RoutingTable import *
 from Packet import *
@@ -31,7 +30,6 @@ import time
 
 LOCAL_HOST = "127.0.0.1"
 STATUS_PRINT_INTERVAL = 5.0
-# PERIODIC_UPDATES = None
 
 
 class RIPv2_Router:
@@ -39,7 +37,7 @@ class RIPv2_Router:
     def __init__(self, router_ID, inputs, outputs, timeout=90, garbage_time=60):
         self.router_ID = router_ID
         self.inputs = inputs # Input Ports
-        self.outputs = outputs # Output Ports        ROUTER_OUTPUTS
+        self.outputs = outputs # Output Ports      
 
         # Timeout & Garbage to be done !
         self.timeout = timeout # in seconds
@@ -51,16 +49,7 @@ class RIPv2_Router:
         # Create input sockets
         self.sockets = self.create_sockets()
 
-        # Read Packet
-
-        # # Initiate the routing table
-        # self.routing_table = []  # Start with an empty routing table
-        # self.routing_table.append(RT_entry(address, next_hop, metric))
         self.routing_table = RoutingTable(timeout=90, garbage=60)
-
-        # self.routing_table = RT_entry(self.router_ID)
-
-        # self.routing_table = RT_entry(self.router_ID, metric)
 
         # Setup to send periodic updates
         self.periodic_updates = None
@@ -74,13 +63,10 @@ class RIPv2_Router:
                                      self.sockets)
 
         
-        # print("Seeding directly‐connected neighbours into routing table:")
         for port_s, metric_s, neigh_id_s in self.outputs:
             neigh_id = int(neigh_id_s)
             cost     = int(metric_s)
-            # print(f"  • dst={neigh_id}, next_hop={neigh_id}, metric={cost}")
-            # use the same method you defined in RoutingTable.py:
-            # it’s called add_or_update(...)
+
             self.routing_table.add_or_update(neigh_id,
                                             neigh_id,
                                             cost)
@@ -91,17 +77,16 @@ class RIPv2_Router:
         print(f"Outputs: {self.outputs}\n")
 
 
-        # Show the table immediately:
+        # Show the table
         self.routing_table.print_table()
 
-        # self.periodic_updates = None 
         self.init_periodic_update() 
 
 
         self._status_timer = None 
         self._start_status_timer()
 
-########################
+
     def _start_status_timer(self):
         """Starts the periodic timer for printing the routing table status."""
         # Ensure any existing timer is cancelled before starting a new one
@@ -114,30 +99,28 @@ class RIPv2_Router:
 
     def _print_status(self):
         """Callback function for the status timer - prints the table and reschedules."""
-        print("\n--- Periodic Status Update ---") # Add a marker for periodic prints
+        print("\n--- Periodic Status Update ---") # periodically prints an update
         self.routing_table.print_table()
         print("------------------------------\n")
 
         # Reschedule the timer to run again
         self._start_status_timer()
 
-########################
 
 
     def receive_packet(self, data):
-        # upon arrival:
+        # when a packet is received
         self.packet_manager.receive_and_process_packet(data)
-        # prune any fully garbage‐collected routes
         self.routing_table.prune()
         self.routing_table.print_table()
 
 
 
-    def create_sockets(self): # Completed 
+    def create_sockets(self): 
         '''
             We initialise the socket so that we can receive packets        
         '''
-        sockets_list = {} #
+        sockets_list = {} 
 
         try:
             for port in self.inputs:
@@ -162,50 +145,36 @@ class RIPv2_Router:
                 all the neighbour routers and refreshes direct routes
             '''
 
-            # print("[INFO] Refreshing direct routes...")
-            # for port_s, metric_s, neigh_id_s in self.outputs:
-            #      neigh_id = int(neigh_id_s)
-            #      cost     = int(metric_s)
-
-            #      self.routing_table.add_or_update(neigh_id, neigh_id, cost)
-
-            self.routing_table.prune()  # Prune dead entries *before* sending
+            self.routing_table.prune()  # Prune dead entries before sending
             self.update_neighbours() # This sends updates based on the *current* table state
             print("Update packet Sent")
 
             periodic_interval = 30 # Base interval
-            plus_minus = random.uniform(-5, 5) # Random offset 0-5s
+            plus_minus = random.uniform(-5, 5) # Random offset -5 - 5s
             self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
-            self.periodic_updates.daemon = True # Ensure timer doesn't prevent exit
+            self.periodic_updates.daemon = True # make sure timer doesnt stop exit
             self.periodic_updates.start()
 
-        
         send_update()
-        # periodic_interval = 10 # Base interval from R1 config
-        # plus_minus = random.uniform(0, 5) # Random offset 0-5s
-        # self.periodic_updates = Timer(periodic_interval + plus_minus, send_update)
-        # self.periodic_updates.daemon = True
-        # self.periodic_updates.start()
-
     
 
     ######################## Testing 
     def update_neighbours(self):
         """
         Send a RIP response to each neighbour. We:
-        1) build one or more packets for that neighbour,
-        2) find the correct output port,
-        3) pick a source socket,
+        1) build one or more packets for neighbour
+        2) find the correct output port
+        3) pick a output socket
         4) send each packet.
         """
         for neigh_id, link_metric in self.packet_manager.neighbours.items():
-            # 1) Build all response packets for this neighbour
+            # 1
             packets = self.packet_manager.create_response_packets(neigh_id)
             if not packets:
                 print(f"[ERROR] No entries to send to Router {neigh_id}")
                 continue
 
-            # 2) Lookup the destination port in self.outputs
+            # 2
             try:
                 out_port = next(
                     int(entry[0])
@@ -216,10 +185,10 @@ class RIPv2_Router:
                 print(f"[ERROR] No matching output port for neighbour {neigh_id}")
                 continue
 
-            # 3) Choose a local socket to send from (e.g. the first input port)
+            # 3
             send_sock = self.sockets[self.inputs[0]]
 
-            # 4) Transmit each packet
+            # 4
             for pkt in packets:
                 try:
                     send_sock.sendto(pkt, (LOCAL_HOST, out_port))
@@ -249,7 +218,7 @@ class RIPv2_Router:
                     
 
                         self.packet_manager.receive_and_process_packet(data)
-                        # print("Routing Table Updated...\n")
+                        
 
                         self.routing_table.prune()
 
