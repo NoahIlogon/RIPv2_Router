@@ -158,6 +158,7 @@ class Packet:
         if family_identifier != (0, 2): # Checks Family Identifier
             print("\n[ERROR] Invalid Address Family Identifier!") # "The address family identifier (AFI) for IPv4 is 0x0002."
             passed = False
+            return passed
 
         route_tag_first = int(entry[2]) # First Byte
         route_tag_second = int(entry[3]) # Second Byte
@@ -166,6 +167,7 @@ class Packet:
             print("\n[ERROR] Invalid Route Tag!") # "Route Tag – Used to distinguish routes learned from other routing protocols. 
                                                # The value is typically set to 0 for RIP routes."
             passed = False
+            return passed
             
 
         IPv4_addy_first = int(entry[4]) # First Byte
@@ -175,7 +177,7 @@ class Packet:
         IPv4_addy = (IPv4_addy_first, IPv4_addy_second, IPv4_addy_third, IPv4_addy_forth) # IPv4 Address
         addy = True
         for byte in IPv4_addy:
-            if not (0 <= byte <= 0xFFFFFFFF):  # Each byte must be between 0 and 255
+            if not (0 <= byte <= 0x255):  # Each byte must be between 0 and 255
                 print(f"[ERROR] Invalid byte in IPv4 Address: {byte}!")
                 passed = False
                 addy = False
@@ -183,6 +185,7 @@ class Packet:
             print("\n-------------Destiantion ID-------------")
             print(f"[ERROR] Invalid IPv4 Address: {IPv4_addy}!")
             print("------------------------------------------")
+            return passed
 
 
         subnet_mask_first = int(entry[8])  # First Byte of subnet mask
@@ -201,6 +204,7 @@ class Packet:
             print("\n-------------Subnet Mask-------------")
             print(f"[ERROR] Bad subnet mask bytes: {subnet_mask}")
             print("---------------------------------------")
+            return passed
 
        
 
@@ -219,6 +223,7 @@ class Packet:
             print("\n-------------Next Hop-------------")
             print(f"[ERROR] Bad subnet mask bytes: {next_hop}")
             print("-------------------------------------")
+            return passed
 
         metric_first = int(entry[16])  # First byte of metric
         metric_second = int(entry[17])  # Second byte of metric

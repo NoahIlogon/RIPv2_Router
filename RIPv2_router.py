@@ -162,12 +162,12 @@ class RIPv2_Router:
                 all the neighbour routers and refreshes direct routes
             '''
 
-            print("[INFO] Refreshing direct routes...")
-            for port_s, metric_s, neigh_id_s in self.outputs:
-                 neigh_id = int(neigh_id_s)
-                 cost     = int(metric_s)
+            # print("[INFO] Refreshing direct routes...")
+            # for port_s, metric_s, neigh_id_s in self.outputs:
+            #      neigh_id = int(neigh_id_s)
+            #      cost     = int(metric_s)
 
-                 self.routing_table.add_or_update(neigh_id, neigh_id, cost)
+            #      self.routing_table.add_or_update(neigh_id, neigh_id, cost)
 
             self.routing_table.prune()  # Prune dead entries *before* sending
             self.update_neighbours() # This sends updates based on the *current* table state
@@ -202,7 +202,7 @@ class RIPv2_Router:
             # 1) Build all response packets for this neighbour
             packets = self.packet_manager.create_response_packets(neigh_id)
             if not packets:
-                print(f"[!] No entries to send to Router {neigh_id}")
+                print(f"[ERROR] No entries to send to Router {neigh_id}")
                 continue
 
             # 2) Lookup the destination port in self.outputs
@@ -251,7 +251,7 @@ class RIPv2_Router:
 
                         print(f"Received packet from {addr}\n")
                         self.packet_manager.receive_and_process_packet(data)
-                        print("Routing Table Updated...\n")
+                        # print("Routing Table Updated...\n")
 
                         self.routing_table.prune()
 
@@ -259,7 +259,7 @@ class RIPv2_Router:
                         
 
                     except Exception as e:
-                        print(f"Error receiving data: {e}")
+                        print(f"[Error] receiving data: {e}")
 
 
 
