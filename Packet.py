@@ -28,7 +28,7 @@ class Packet:
  
     def create_response_packets(self, neighbour_id: int) -> list[bytes]: # Creates an Update packet
         """
-        Create the update packet
+            Create the update packet
         """
         
         packets = []
