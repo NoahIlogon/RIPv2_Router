@@ -1,18 +1,9 @@
 '''
-This Module will read through the info in a config file to create
-daemon router instance.
+The config file reader will:
+- take a txt file and check it for validity
+- initialise the router daemon.
 
-We need to Process 3 Parameters:
-router_ID, input_ports, outputs  ~~ #if one is missing; stop program with an err message
-
-CONDITIONS TO BE MET:
-router_ID's of all routers are distinct
-
- If two routers A and B are neighbours it must:
- - Provide an input port x at B that is also listed as output port of A
- - Provide an input port y at A that is also listed as output port of B  # 2 way comms
- - Ensure no other host
-
+<Configparser will create this dict format>
 {
     'Config-File': {
         'Router-ID': '0',
@@ -28,12 +19,11 @@ router_ID's of all routers are distinct
 import sys
 import os
 import configparser
-from RIPv2_router import * # call this to initialise the daemon
+from RIPv2_router import * 
 from collections import Counter
 
-# import RIPv2_router
 
-TIME_DEFAULT = 0 # change this later on
+TIME_DEFAULT = 0 
 LOCAL_HOST = '127.0.0.1'
 ROUTER_ID = None
 ROUTER_INPUTS = []
@@ -74,7 +64,7 @@ def init_daemon():
 def read_config_file(config_file):
     '''
         This function will read the config file passed in 
-        the terminal and will
+        the terminal and will try to parse it with the config parser
     '''
 
     try:
@@ -90,12 +80,12 @@ def read_config_file(config_file):
 
 def read_router_ID(config_data):
     '''
-        retreives router ID val from config file
-        and assesses the validity (maybe return the ID)
+        retreives router ID value from config file
+        and assesses the validity then returns the router ID
     '''
 
     try:
-        router_id = int(config_data.get("ConfigFile", "Router-ID")) # Finds the value under Router-ID field
+        router_id = int(config_data.get("ConfigFile", "Router-ID")) # Finds value under Router-ID field
 
     except configparser.ParsingError as e:
         print(f"[ERROR] parsing the config file: {e}")
@@ -120,7 +110,7 @@ def read_router_ID(config_data):
 def read_input_ports(config_file):
     '''
         retreives the list of input ports in the config file 
-        and assess validity and returns
+        and assess validity and returns the router input(s)
     '''
 
     try:
@@ -197,15 +187,9 @@ def read_output_ports(config_file):
         print('ERROR: "Output-Ports" missing in the Config File.')
         sys.exit()
 
-def create_socket(ports):
-    '''
-        Creates a socket for each port and binds it
-    '''
-    pass
-
 
 if __name__ == "__main__":
     init_daemon()
     router_instance = RIPv2_Router(ROUTER_ID, ROUTER_INPUTS, ROUTER_OUTPUTS)
-    router_instance.monitor_RT()  # Start listening for updates INF loop
+    router_instance.monitor_RT()  # Start listening for updates (INF loop)
 
