@@ -1,4 +1,4 @@
 [ConfigFile]
 Router-ID = 4
-Input-Ports = 5005
+Input-Ports = 5004
 Output-Ports = 5002-1-2

@@ -282,3 +282,13 @@ class RoutingTable:
         
     def print_table(self):
         print(self.__repr__())
+
+    def reset_direct_neighbour_timer(self, neighbour_id: int):
+       
+        with self._lock:
+        
+            if neighbour_id in self._entries:
+                 e = self._entries[neighbour_id]
+           
+                 if e.destination_id == neighbour_id and e.next_hop_id == neighbour_id:
+                      e.reset_timeout()

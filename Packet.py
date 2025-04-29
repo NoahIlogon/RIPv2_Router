@@ -255,6 +255,7 @@ class Packet:
             print(f"[ERROR] Received update from non-neighbour {received_ID}. Ignoring packet.")
             return # Ignore updates from non-neighbours
 
+        self.routing_table.reset_direct_neighbour_timer(received_ID)
         # 2) How many 20‐byte entries?
         packet_len = len(packet)
         if packet_len < HDR_SIZE or (packet_len - HDR_SIZE) % RT_SIZE != 0:

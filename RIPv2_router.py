@@ -74,11 +74,11 @@ class RIPv2_Router:
                                      self.sockets)
 
         
-        print("Seeding directly‐connected neighbours into routing table:")
+        # print("Seeding directly‐connected neighbours into routing table:")
         for port_s, metric_s, neigh_id_s in self.outputs:
             neigh_id = int(neigh_id_s)
             cost     = int(metric_s)
-            print(f"  • dst={neigh_id}, next_hop={neigh_id}, metric={cost}")
+            # print(f"  • dst={neigh_id}, next_hop={neigh_id}, metric={cost}")
             # use the same method you defined in RoutingTable.py:
             # it’s called add_or_update(...)
             self.routing_table.add_or_update(neigh_id,
@@ -243,13 +243,11 @@ class RIPv2_Router:
                 for sock in readable:
                     try:
                         data, addr = sock.recvfrom(4096)
-                        # print(f"[DEBUG] Got {len(data)} bytes from {addr} on local port {sock.getsockname()[1]}")
+
 
                         local_port = sock.getsockname()[1]
-                        print(f"[Received] Got {len(data)} bytes on local port {local_port} from {addr}")
+                    
 
-
-                        print(f"Received packet from {addr}\n")
                         self.packet_manager.receive_and_process_packet(data)
                         # print("Routing Table Updated...\n")
 
