@@ -147,7 +147,7 @@ class RIPv2_Router:
 
             self.routing_table.prune()  # Prune dead entries before sending
             self.update_neighbours() # This sends updates based on the *current* table state
-            print("Update packet Sent")
+         
 
             periodic_interval = 30 # Base interval
             plus_minus = random.uniform(-5, 5) # Random offset -5 - 5s
@@ -192,8 +192,7 @@ class RIPv2_Router:
             for pkt in packets:
                 try:
                     send_sock.sendto(pkt, (LOCAL_HOST, out_port))
-                    print(f"[Sent]  {len(pkt)} bytes to Router {neigh_id} "
-                        f"on port {out_port}")
+                    
                 except Exception as e:
                     print(f"[ERROR] Sending to {neigh_id}@{out_port}: {e}")
 
@@ -215,15 +214,12 @@ class RIPv2_Router:
 
 
                         local_port = sock.getsockname()[1]
-                    
 
                         self.packet_manager.receive_and_process_packet(data)
-                        
 
                         self.routing_table.prune()
 
                         self.routing_table.print_table()
-                        
 
                     except Exception as e:
                         print(f"[Error] receiving data: {e}")
