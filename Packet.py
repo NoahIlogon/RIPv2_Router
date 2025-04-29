@@ -28,9 +28,7 @@ class Packet:
  
     def create_response_packets(self, neighbour_id: int) -> list[bytes]: # Creates an Update packet
         """
-        Create the request packet and send it to the server
-        - Implemented correctly?
-        - We should only be creating update packets and not request packets
+        Create the update packet
         """
         
         packets = []
@@ -103,12 +101,13 @@ class Packet:
 
     
     def check_header(self, packet: bytes):
-        """Checks if the RIP header is correct. If it is correct, it returns
-        the ID of the router it recieved it from"""
+        """
+            Checks if the RIP header is correct. If it is correct, returns
+            the ID of the router it recieved it from
+        """
         command = int(packet[0])
         version = int(packet[1])
         reserved = (packet[2], packet[3])  # Reserved bytes must be zero
-        # router_ID = int(packet[4:6])
         router_ID = int.from_bytes(packet[4:6], byteorder='big')
         
         if command != 2:
@@ -142,7 +141,7 @@ class Packet:
 
     def check_entry(self, entry):
         """Checks the entry and insures that the entry and all of its components are valid
-            - consider returning some values?
+            - returns passed
         """
 
         passed = True
@@ -156,7 +155,7 @@ class Packet:
         family_identifier_second = int(entry[1]) # Second Byte
         family_identifier = (family_identifier_first, family_identifier_second) # Family Identifier
         if family_identifier != (0, 2): # Checks Family Identifier
-            print("\n[ERROR] Invalid Address Family Identifier!") # "The address family identifier (AFI) for IPv4 is 0x0002."
+            print("\n[ERROR] Invalid Address Family Identifier!") 
             passed = False
             return passed
 
@@ -164,8 +163,8 @@ class Packet:
         route_tag_second = int(entry[3]) # Second Byte
         route_tag = (route_tag_first, route_tag_second) # Route Tag
         if route_tag != (0, 0):
-            print("\n[ERROR] Invalid Route Tag!") # "Route Tag – Used to distinguish routes learned from other routing protocols. 
-                                               # The value is typically set to 0 for RIP routes."
+            print("\n[ERROR] Invalid Route Tag!") #  distinguish routes learned from other routing protocols. 
+                                               
             passed = False
             return passed
             
@@ -181,10 +180,9 @@ class Packet:
                 print(f"[ERROR] Invalid byte in IPv4 Address: {byte}!")
                 passed = False
                 addy = False
+
         if not addy:
-            print("\n-------------Destiantion ID-------------")
             print(f"[ERROR] Invalid IPv4 Address: {IPv4_addy}!")
-            print("------------------------------------------")
             return passed
 
 
@@ -201,9 +199,7 @@ class Packet:
                 passed = False
 
         if not mask:
-            print("\n-------------Subnet Mask-------------")
             print(f"[ERROR] Bad subnet mask bytes: {subnet_mask}")
-            print("---------------------------------------")
             return passed
 
        
@@ -212,24 +208,24 @@ class Packet:
         next_hop_second = int(entry[13])  # Second Byte
         next_hop_third = int(entry[14])  # Third Byte
         next_hop_forth = int(entry[15])  # Fourth Byte
-        next_hop = (next_hop_first, next_hop_second, next_hop_third, next_hop_forth)  # Next hop IP address
+        next_hop = (next_hop_first, next_hop_second, next_hop_third, next_hop_forth)  # Next hop address
         hop = True
         for byte in next_hop:
             if not (0 <= byte <= 255):  # Each byte must be between 0 and 255
                 print(f"ERROR: Invalid byte in Next Hop: {byte}! It must be between 0-255 inclusive.")
                 hop = False
                 passed = False
+
         if not hop:
-            print("\n-------------Next Hop-------------")
             print(f"[ERROR] Bad subnet mask bytes: {next_hop}")
-            print("-------------------------------------")
             return passed
 
-        metric_first = int(entry[16])  # First byte of metric
-        metric_second = int(entry[17])  # Second byte of metric
-        metric_third = int(entry[18])  # Third byte of metric
-        metric_fourth = int(entry[19])  # Fourth byte of metric
+        metric_first = int(entry[16])  # First byte 
+        metric_second = int(entry[17])  # Second byte 
+        metric_third = int(entry[18])  # Third byte 
+        metric_fourth = int(entry[19])  # Fourth byte 
         received_metric = (metric_first << 24) + (metric_second << 16) + (metric_third << 8) + metric_fourth  # Combine the 4 bytes into a single metric
+
         if not (1 <= received_metric <= INF):
             print(f"[ERROR] Invalid metric: {received_metric} (must be between 1 - {INF})")
             passed = False
@@ -246,26 +242,21 @@ class Packet:
             print("[ERROR] Packet Header Check Failed!\n")
             return # Drop the packet if header is invalid
 
-        # print(f"[✓] Received update from Router {received_ID}")
-
-        # Ensure the sender is a direct neighbour
-        # We need the link cost to the neighbour to add it to received metrics
         link_cost_to_sender = self.neighbours.get(received_ID)
         if link_cost_to_sender is None:
             print(f"[ERROR] Received update from non-neighbour {received_ID}. Ignoring packet.")
             return # Ignore updates from non-neighbours
 
         self.routing_table.reset_direct_neighbour_timer(received_ID)
-        # 2) How many 20‐byte entries?
+
         packet_len = len(packet)
         if packet_len < HDR_SIZE or (packet_len - HDR_SIZE) % RT_SIZE != 0:
             print(f"[ERROR] Invalid packet length: {packet_len}. Must be 6 + N * 20.")
             return
 
         num_entries = (packet_len - HDR_SIZE) // RT_SIZE
-        # print(f"[✓] Received update from Router {received_ID} with {num_entries} entries")
 
-        # Process each route entry in the packet
+        # Process each route entry in packet
         for entry_index in range(num_entries):
             entry_start_index = HDR_SIZE + entry_index * RT_SIZE
             entry_end_index = entry_start_index + RT_SIZE
@@ -274,7 +265,7 @@ class Packet:
             if not self.check_entry(entry_bytes):
                 # If entry invalid, log the error and skip this entry.
                 print(f"[ERROR] Invalid entry at index {entry_index} (starting at byte {entry_start_index}). Skipping this entry.")
-                continue # Skip this invalid entry, continue with the next one
+                continue # skip entry
 
             dest_id = int.from_bytes(entry_bytes[4:8], 'big')
             received_metric  = int.from_bytes(entry_bytes[16:20], 'big')
@@ -286,12 +277,10 @@ class Packet:
 
             if new_metric >= INF:
                 self.routing_table.mark_unreachable(dest_id)
+
             else:
-                # Otherwise, add or update the route through this neighbour
+                # Otherwise, add or update the route through neighbour
                 self.routing_table.add_or_update(dest_id, received_ID, new_metric)
 
-
-        print("Packet Check Passed!\n")
-        # Prune dead entries whose garbage timers have expired after processing updates
-        self.routing_table.prune()
+        self.routing_table.prune() # remove dead entries
 
